@@ -136,7 +136,22 @@ def init_db():
 
     count = conn.execute('SELECT COUNT(*) FROM notes').fetchone()[0]
     if count == 0:
-        import_xlsx(conn)
+        if os.path.exists(XLSX_PATH):
+            import_xlsx(conn)
+        else:
+            # DB も xlsx もない初回起動時はサンプルデータを2件挿入する
+            sample_rows = [
+                ('2024-02-03', '日勤', '報告', '午前',
+                 '日常点検〇〇系列実施しました。異常なし。', '△△'),
+                ('2024-02-03', '夜勤', '故障', '2:23',
+                 '〇〇機過負荷発生現場確認し□□を除去して故障復帰', ''),
+            ]
+            conn.executemany(
+                'INSERT INTO notes (date, kinmu, shubetsu, jikoku, naiyou, kinyugsha) VALUES (?,?,?,?,?,?)',
+                sample_rows
+            )
+            conn.commit()
+            print('Sample data inserted (2 rows).')
     conn.close()
 
 

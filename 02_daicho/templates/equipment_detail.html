@@ -34,7 +34,6 @@
         <dl class="row mb-0">
           <dt class="col-5">機器名称</dt><dd class="col-7">{{ equipment.equipment_name }}</dd>
           <dt class="col-5">形式</dt><dd class="col-7">{{ equipment.model or '-' }}</dd>
-          <dt class="col-5">工種番号</dt><dd class="col-7">{{ equipment.work_type or '-' }}</dd>
           <dt class="col-5">設置場所</dt><dd class="col-7">{{ equipment.location or '-' }}</dd>
           <dt class="col-5">製造所</dt><dd class="col-7">{{ equipment.manufacturer or '-' }}</dd>
           <dt class="col-5">稼働状況</dt>
@@ -44,8 +43,6 @@
             {% elif equipment.op_status == '撤去' %}<span class="badge bg-secondary">撤去</span>
             {% else %}<span>{{ equipment.op_status or '-' }}</span>{% endif %}
           </dd>
-          <dt class="col-5">系列番号</dt><dd class="col-7">{{ equipment.series_no or '-' }}</dd>
-          <dt class="col-5">号機番号</dt><dd class="col-7">{{ equipment.unit_no or '-' }}</dd>
         </dl>
       </div>
     </div>
@@ -59,11 +56,9 @@
         <dl class="row mb-0">
           <dt class="col-5">施設番号</dt><dd class="col-7">{{ equipment.facility_no or '-' }}</dd>
           <dt class="col-5">施設名称</dt><dd class="col-7">{{ equipment.facility_name or '-' }}</dd>
-          <dt class="col-5">顧客コード</dt><dd class="col-7">{{ equipment.customer_code or '-' }}</dd>
           <dt class="col-5">大分類</dt><dd class="col-7">{{ equipment.category_l or '-' }}</dd>
           <dt class="col-5">中分類</dt><dd class="col-7">{{ equipment.category_m or '-' }}</dd>
           <dt class="col-5">小分類</dt><dd class="col-7">{{ equipment.category_s or '-' }}</dd>
-          <dt class="col-5">管理部署</dt><dd class="col-7">{{ equipment.dept_code or '-' }}</dd>
         </dl>
       </div>
     </div>
@@ -76,13 +71,7 @@
       <div class="card-body">
         <dl class="row mb-0">
           <dt class="col-5">設置年月日</dt><dd class="col-7">{{ equipment.installed_at or '-' }}</dd>
-          <dt class="col-5">撤去年月日</dt><dd class="col-7">{{ equipment.removed_at or '-' }}</dd>
           <dt class="col-5">耐用年数</dt><dd class="col-7">{{ equipment.service_life ~ '年' if equipment.service_life else '-' }}</dd>
-          <dt class="col-5">目標耐用年数</dt><dd class="col-7">{{ equipment.target_life ~ '年' if equipment.target_life else '-' }}</dd>
-          <dt class="col-5">取得価額</dt><dd class="col-7">{{ '{:,}円'.format(equipment.acquisition_cost) if equipment.acquisition_cost else '-' }}</dd>
-          <dt class="col-5">再取得価額</dt><dd class="col-7">{{ '{:,}円'.format(equipment.replacement_cost) if equipment.replacement_cost else '-' }}</dd>
-          <dt class="col-5">資産グループ</dt><dd class="col-7">{{ equipment.asset_group or '-' }}</dd>
-          <dt class="col-5">固定資産番号</dt><dd class="col-7">{{ equipment.fixed_asset_no or '-' }}</dd>
           <dt class="col-5 fw-bold">経過年数</dt><dd class="col-7 fw-bold" id="elapsed-years">-</dd>
           <dt class="col-5 fw-bold">残存耐用年数</dt><dd class="col-7 fw-bold" id="remaining-life">-</dd>
           <dt class="col-5 fw-bold">老朽化率</dt><dd class="col-7" id="aging-rate-cell">-</dd>
@@ -91,50 +80,12 @@
     </div>
   </div>
 
-  <!-- 保全・劣化 -->
+  <!-- 備考 -->
   <div class="col-12 col-lg-6">
     <div class="card h-100">
-      <div class="card-header"><i class="bi bi-tools me-1"></i>保全・劣化</div>
+      <div class="card-header"><i class="bi bi-file-text me-1"></i>備考</div>
       <div class="card-body">
-        <dl class="row mb-0">
-          <dt class="col-6">保全方法</dt><dd class="col-6">{{ equipment.maintenance_method or '-' }}</dd>
-          <dt class="col-6">設備重要度</dt><dd class="col-6">{{ equipment.importance or '-' }}</dd>
-          <dt class="col-6">コストインパクト</dt><dd class="col-6">{{ equipment.cost_impact or '-' }}</dd>
-          <dt class="col-6">法定点検</dt>
-          <dd class="col-6">{{ '有' if equipment.legal_inspection else '無' }}</dd>
-          <dt class="col-6">劣化予兆判断</dt>
-          <dd class="col-6">{{ '可' if equipment.degradation_flag else '不可' }}</dd>
-          <dt class="col-6">高度化対象</dt>
-          <dd class="col-6">{{ '対象' if equipment.upgrade_target else '非対象' }}</dd>
-          <dt class="col-6">劣化度大</dt>
-          <dd class="col-6">{{ '有' if equipment.high_degradation else '無' }}</dd>
-        </dl>
-      </div>
-    </div>
-  </div>
-
-  <!-- 書類・仕様・備考 -->
-  <div class="col-12">
-    <div class="card">
-      <div class="card-header"><i class="bi bi-file-text me-1"></i>書類・仕様・備考</div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-12 col-md-4">
-            <dl class="row mb-0">
-              <dt class="col-6">様式番号</dt><dd class="col-6">{{ equipment.form_no or '-' }}</dd>
-              <dt class="col-6">保守様式ID</dt><dd class="col-6">{{ equipment.maintenance_form_id or '-' }}</dd>
-              <dt class="col-6">完成図書</dt><dd class="col-6">{{ '有' if equipment.completion_docs else '無' }}</dd>
-              <dt class="col-6">保点要領書</dt><dd class="col-6">{{ '有' if equipment.maintenance_manual else '無' }}</dd>
-              <dt class="col-6">取扱説明書</dt><dd class="col-6">{{ '有' if equipment.instruction_manual else '無' }}</dd>
-              <dt class="col-6">予備品リスト</dt><dd class="col-6">{{ '有' if equipment.spare_parts_list else '無' }}</dd>
-            </dl>
-          </div>
-          <div class="col-12 col-md-8">
-            <div class="mb-2"><strong>仕様:</strong><br>{{ equipment.spec or '-' }}</div>
-            <div class="mb-2"><strong>記事１:</strong><br>{{ equipment.notes1 or '-' }}</div>
-            <div><strong>記事２:</strong><br>{{ equipment.notes2 or '-' }}</div>
-          </div>
-        </div>
+        <p class="mb-0" style="white-space:pre-wrap;">{{ equipment.notes1 or '-' }}</p>
       </div>
     </div>
   </div>

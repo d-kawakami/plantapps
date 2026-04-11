@@ -1,39 +1,41 @@
-# 機器台帳管理システム
+# Equipment Registry Management System
 
-設備・機器の情報を一元管理するための Web アプリケーションです。Flask + SQLite で動作し、ブラウザから機器の登録・検索・編集・CSV エクスポートが行えます。
+A web application for centralized management of plant equipment information. Built with Flask + SQLite, it supports equipment registration, search, editing, and CSV export from your browser. Database models are anonymized for demo purposes.
 
-## 機能
+[日本語版はこちら / Japanese](README_ja.md)
 
-- **機器一覧・検索** — 施設番号・施設名・大/中/小分類・稼働状況・製造所などで絞り込み。類義語による自然言語検索にも対応
-- **機器詳細・編集** — 機器情報の登録・更新・削除・複製
-- **測定値管理** — 機器ごとの測定履歴を記録
-- **CSV インポート** — Shift-JIS / UTF-8 などの文字コードを自動判定してインポート
-- **CSV エクスポート** — 現在の検索条件でフィルタした結果を CSV (UTF-8 BOM付き) でダウンロード
-- **ダッシュボード** — 機器台数・稼働状況の集計、老朽化上位機器の表示
-- **オートコンプリート** — 入力フォームの候補補完
+## Features
 
-## 技術スタック
+- **Equipment List & Search** — Filter by facility number, facility name, major/middle/minor category, operating status, manufacturer, and more. Supports natural language search with synonyms.
+- **Equipment Detail & Edit** — Register, update, delete, and duplicate equipment records.
+- **Measurement Management** — Record measurement history for each piece of equipment.
+- **CSV Import** — Auto-detects character encoding (Shift-JIS / UTF-8, etc.) on import.
+- **CSV Export** — Download filtered results as CSV (UTF-8 with BOM).
+- **Dashboard** — Summary of equipment count and operating status, with aging equipment rankings.
+- **Autocomplete** — Input suggestions for form fields.
 
-| 要素 | 内容 |
-|------|------|
-| バックエンド | Python 3.x / Flask |
-| データベース | SQLite (`daicho.db`) |
-| フロントエンド | HTML / CSS / JavaScript (テンプレート: Jinja2) |
-| 文字コード検出 | chardet |
+## Tech Stack
 
-## セットアップ
+| Component | Details |
+|-----------|---------|
+| Backend | Python 3.x / Flask |
+| Database | SQLite (`daicho.db`) |
+| Frontend | HTML / CSS / JavaScript (Jinja2 templates) |
+| Encoding Detection | chardet |
 
-### 必要環境
+## Setup
 
-- Python 3.9 以上
+### Requirements
 
-### インストール
+- Python 3.9 or higher
+
+### Installation
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 起動
+### Running the App
 
 **Linux / macOS:**
 ```bash
@@ -45,47 +47,47 @@ pip install -r requirements.txt
 start.bat
 ```
 
-または直接:
+Or directly:
 ```bash
 python app.py
 ```
 
-起動後、ブラウザで `http://localhost:5007` を開いてください。
+After starting, open `http://localhost:5007` in your browser.
 
-## 初期データ
+## Initial Data
 
-起動時に機器テーブルが空の場合、同ディレクトリの `kikilist.csv` を自動インポートします。
+If the equipment table is empty on startup, the app automatically imports `kikilist.csv` from the same directory.
 
-## ディレクトリ構成
+## Directory Structure
 
 ```
-07_daicho/
-├── app.py              # Flask アプリ本体・ルーティング
-├── models.py           # データアクセス層 (CRUD / CSV マッピング)
-├── database.py         # DB 接続・スキーマ初期化
-├── requirements.txt    # Python 依存パッケージ
-├── kikilist.csv        # 初期データ (機器一覧)
-├── start.sh            # 起動スクリプト (Linux/macOS)
-├── start.bat           # 起動スクリプト (Windows)
-├── static/             # CSS などの静的ファイル
-└── templates/          # Jinja2 テンプレート
+02_daicho/
+├── app.py              # Flask app & routing
+├── models.py           # Data access layer (CRUD / CSV mapping)
+├── database.py         # DB connection & schema initialization
+├── requirements.txt    # Python dependencies
+├── kikilist.csv        # Initial data (equipment list)
+├── start.sh            # Startup script (Linux/macOS)
+├── start.bat           # Startup script (Windows)
+├── static/             # Static files (CSS, etc.)
+└── templates/          # Jinja2 templates
 ```
 
-## API エンドポイント
+## API Endpoints
 
-| メソッド | パス | 説明 |
-|----------|------|------|
-| GET | `/api/equipment` | 機器一覧取得 (フィルタ・ページネーション対応) |
-| POST | `/api/equipment` | 機器新規登録 |
-| GET | `/api/equipment/:id` | 機器1件取得 |
-| PUT | `/api/equipment/:id` | 機器更新 |
-| DELETE | `/api/equipment/:id` | 機器削除 |
-| POST | `/api/equipment/:id/duplicate` | 機器複製 |
-| GET | `/api/equipment/:id/measurements` | 測定値一覧 |
-| POST | `/api/equipment/:id/measurements` | 測定値登録 |
-| GET | `/api/facilities` | 施設一覧 |
-| GET | `/api/categories` | 分類一覧 |
-| GET | `/api/autocomplete` | フィールド補完候補 |
-| POST | `/api/import/csv` | CSV インポート |
-| GET | `/api/export/csv` | CSV エクスポート |
-| GET | `/api/dashboard/stats` | ダッシュボード統計 |
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/equipment` | List equipment (with filter & pagination) |
+| POST | `/api/equipment` | Register new equipment |
+| GET | `/api/equipment/:id` | Get single equipment record |
+| PUT | `/api/equipment/:id` | Update equipment |
+| DELETE | `/api/equipment/:id` | Delete equipment |
+| POST | `/api/equipment/:id/duplicate` | Duplicate equipment |
+| GET | `/api/equipment/:id/measurements` | List measurements |
+| POST | `/api/equipment/:id/measurements` | Register measurement |
+| GET | `/api/facilities` | List facilities |
+| GET | `/api/categories` | List categories |
+| GET | `/api/autocomplete` | Autocomplete suggestions |
+| POST | `/api/import/csv` | Import CSV |
+| GET | `/api/export/csv` | Export CSV |
+| GET | `/api/dashboard/stats` | Dashboard statistics |

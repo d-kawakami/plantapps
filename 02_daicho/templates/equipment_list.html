@@ -31,10 +31,6 @@
           <input type="text" class="form-control form-control-sm" id="f-facility_name" placeholder="施設名称">
         </div>
         <div class="col-12 col-md-4 col-lg-3">
-          <label class="form-label small mb-1">工種番号</label>
-          <input type="text" class="form-control form-control-sm" id="f-work_type" placeholder="例: 機械">
-        </div>
-        <div class="col-12 col-md-4 col-lg-3">
           <label class="form-label small mb-1">大分類</label>
           <input type="text" class="form-control form-control-sm" id="f-category_l" placeholder="大分類" list="dl-category_l">
           <datalist id="dl-category_l"></datalist>
@@ -174,7 +170,6 @@ function toggleCol(key, checked) {
 function getFilters() {
   return {
     facility_name: document.getElementById('f-facility_name').value,
-    work_type: document.getElementById('f-work_type').value,
     category_l: document.getElementById('f-category_l').value,
     category_m: document.getElementById('f-category_m').value,
     category_s: document.getElementById('f-category_s').value,
@@ -291,7 +286,7 @@ document.getElementById('filter-toggle').addEventListener('click', () => {
 
 document.getElementById('search-btn').addEventListener('click', () => loadEquipment(1));
 document.getElementById('clear-btn').addEventListener('click', () => {
-  ['f-facility_name','f-work_type','f-category_l','f-category_m','f-category_s','f-q','f-manufacturer','f-installed_from','f-installed_to'].forEach(id => {
+  ['f-facility_name','f-category_l','f-category_m','f-category_s','f-q','f-manufacturer','f-installed_from','f-installed_to'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('f-op_status').value = '';

@@ -27,9 +27,7 @@
 <ul class="nav nav-tabs mb-3" id="formTabs" role="tablist">
   <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-basic">基本情報</button></li>
   <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-facility">施設・分類</button></li>
-  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-asset">資産情報</button></li>
-  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-maintenance">保全・劣化</button></li>
-  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-docs">書類・仕様・備考</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-asset">資産・備考</button></li>
 </ul>
 
 <form id="equipment-form" novalidate>
@@ -49,11 +47,7 @@
         <input type="text" class="form-control" id="f-model" name="model">
       </div>
       <div class="col-12 col-md-6">
-        <label class="form-label">工種番号</label>
-        <input type="text" class="form-control" id="f-work_type" name="work_type">
-      </div>
-      <div class="col-12 col-md-6">
-        <label class="form-label">設置場所 <span class="text-danger">*</span></label>
+        <label class="form-label">設置場所</label>
         <input type="text" class="form-control" id="f-location" name="location" list="dl-location">
         <datalist id="dl-location"></datalist>
       </div>
@@ -70,14 +64,6 @@
           <option value="撤去">撤去</option>
         </select>
       </div>
-      <div class="col-12 col-md-6">
-        <label class="form-label">系列番号</label>
-        <input type="text" class="form-control" id="f-series_no" name="series_no">
-      </div>
-      <div class="col-12 col-md-6">
-        <label class="form-label">号機番号</label>
-        <input type="text" class="form-control" id="f-unit_no" name="unit_no">
-      </div>
     </div>
   </div>
 
@@ -89,17 +75,13 @@
         <input type="text" class="form-control" id="f-facility_no" name="facility_no">
       </div>
       <div class="col-12 col-md-6">
-        <label class="form-label">施設名称 <span class="text-danger">*</span></label>
-        <input type="text" class="form-control" id="f-facility_name" name="facility_name" list="dl-facility_name" required>
+        <label class="form-label">施設名称</label>
+        <input type="text" class="form-control" id="f-facility_name" name="facility_name" list="dl-facility_name">
         <datalist id="dl-facility_name"></datalist>
       </div>
-      <div class="col-12 col-md-6">
-        <label class="form-label">顧客コード</label>
-        <input type="text" class="form-control" id="f-customer_code" name="customer_code">
-      </div>
       <div class="col-12 col-md-4">
-        <label class="form-label">大分類 <span class="text-danger">*</span></label>
-        <input type="text" class="form-control" id="f-category_l" name="category_l" list="dl-cat-l" required>
+        <label class="form-label">大分類</label>
+        <input type="text" class="form-control" id="f-category_l" name="category_l" list="dl-cat-l">
         <datalist id="dl-cat-l"></datalist>
       </div>
       <div class="col-12 col-md-4">
@@ -112,14 +94,10 @@
         <input type="text" class="form-control" id="f-category_s" name="category_s" list="dl-cat-s">
         <datalist id="dl-cat-s"></datalist>
       </div>
-      <div class="col-12 col-md-6">
-        <label class="form-label">管理部署コード</label>
-        <input type="text" class="form-control" id="f-dept_code" name="dept_code">
-      </div>
     </div>
   </div>
 
-  <!-- タブ3: 資産情報 -->
+  <!-- タブ3: 資産・備考 -->
   <div class="tab-pane fade" id="tab-asset">
     <div class="row g-3">
       <div class="col-12 col-md-6">
@@ -127,146 +105,13 @@
         <input type="date" class="form-control" id="f-installed_at" name="installed_at">
       </div>
       <div class="col-12 col-md-6">
-        <label class="form-label">撤去年月日</label>
-        <input type="date" class="form-control" id="f-removed_at" name="removed_at">
-        <div class="invalid-feedback" id="removed_at-err">撤去年月日は設置年月日以降にしてください</div>
-      </div>
-      <div class="col-12 col-md-6">
         <label class="form-label">耐用年数 (年)</label>
         <input type="number" class="form-control" id="f-service_life" name="service_life" min="1">
         <div class="invalid-feedback">正の整数を入力してください</div>
       </div>
-      <div class="col-12 col-md-6">
-        <label class="form-label">目標耐用年数 (年)</label>
-        <input type="number" class="form-control" id="f-target_life" name="target_life" min="1">
-        <div class="invalid-feedback">正の整数を入力してください</div>
-      </div>
-      <div class="col-12 col-md-6">
-        <label class="form-label">取得価額 (円)</label>
-        <input type="number" class="form-control" id="f-acquisition_cost" name="acquisition_cost" min="0">
-        <div class="invalid-feedback">0以上の値を入力してください</div>
-      </div>
-      <div class="col-12 col-md-6">
-        <label class="form-label">再取得価額 (円)</label>
-        <input type="number" class="form-control" id="f-replacement_cost" name="replacement_cost" min="0">
-        <div class="invalid-feedback">0以上の値を入力してください</div>
-      </div>
-      <div class="col-12 col-md-6">
-        <label class="form-label">資産グループ</label>
-        <input type="text" class="form-control" id="f-asset_group" name="asset_group">
-      </div>
-      <div class="col-12 col-md-6">
-        <label class="form-label">固定資産番号</label>
-        <input type="text" class="form-control" id="f-fixed_asset_no" name="fixed_asset_no">
-      </div>
-      <div class="col-12 col-md-6">
-        <label class="form-label">処分制限期間</label>
-        <input type="text" class="form-control" id="f-disposal_limit" name="disposal_limit">
-      </div>
-    </div>
-  </div>
-
-  <!-- タブ4: 保全・劣化 -->
-  <div class="tab-pane fade" id="tab-maintenance">
-    <div class="row g-3">
-      <div class="col-12 col-md-6">
-        <label class="form-label">保全方法</label>
-        <select class="form-select" id="f-maintenance_method" name="maintenance_method">
-          <option value="">選択してください</option>
-          <option value="時間管理保全">時間管理保全</option>
-          <option value="状態監視保全">状態監視保全</option>
-          <option value="事後保全">事後保全</option>
-          <option value="その他">その他</option>
-        </select>
-      </div>
-      <div class="col-12 col-md-6">
-        <label class="form-label">設備重要度</label>
-        <select class="form-select" id="f-importance" name="importance">
-          <option value="">-</option>
-          <option value="A">A</option>
-          <option value="B">B</option>
-          <option value="C">C</option>
-          <option value="D">D</option>
-        </select>
-      </div>
-      <div class="col-12 col-md-6">
-        <label class="form-label">コストインパクト</label>
-        <input type="text" class="form-control" id="f-cost_impact" name="cost_impact">
-      </div>
       <div class="col-12">
-        <div class="row g-3">
-          <div class="col-auto">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="f-legal_inspection" name="legal_inspection">
-              <label class="form-check-label" for="f-legal_inspection">法定点検有無</label>
-            </div>
-          </div>
-          <div class="col-auto">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="f-degradation_flag" name="degradation_flag">
-              <label class="form-check-label" for="f-degradation_flag">劣化予兆判断可否</label>
-            </div>
-          </div>
-          <div class="col-auto">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="f-upgrade_target" name="upgrade_target">
-              <label class="form-check-label" for="f-upgrade_target">高度化対象</label>
-            </div>
-          </div>
-          <div class="col-auto">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="f-high_degradation" name="high_degradation">
-              <label class="form-check-label" for="f-high_degradation">劣化度大</label>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- タブ5: 書類・仕様・備考 -->
-  <div class="tab-pane fade" id="tab-docs">
-    <div class="row g-3">
-      <div class="col-12 col-md-6">
-        <label class="form-label">様式番号</label>
-        <input type="text" class="form-control" id="f-form_no" name="form_no">
-      </div>
-      <div class="col-12 col-md-6">
-        <label class="form-label">保守点検様式ID</label>
-        <input type="text" class="form-control" id="f-maintenance_form_id" name="maintenance_form_id">
-      </div>
-      <div class="col-12">
-        <label class="form-label">仕様</label>
-        <textarea class="form-control" id="f-spec" name="spec" rows="3"></textarea>
-      </div>
-      <div class="col-12 col-md-6">
-        <label class="form-label">記事１</label>
-        <textarea class="form-control" id="f-notes1" name="notes1" rows="2"></textarea>
-      </div>
-      <div class="col-12 col-md-6">
-        <label class="form-label">記事２</label>
-        <textarea class="form-control" id="f-notes2" name="notes2" rows="2"></textarea>
-      </div>
-      <div class="col-12">
-        <label class="form-label d-block">書類</label>
-        <div class="d-flex flex-wrap gap-3">
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="f-completion_docs" name="completion_docs">
-            <label class="form-check-label" for="f-completion_docs">完成図書</label>
-          </div>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="f-maintenance_manual" name="maintenance_manual">
-            <label class="form-check-label" for="f-maintenance_manual">保点要領書</label>
-          </div>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="f-instruction_manual" name="instruction_manual">
-            <label class="form-check-label" for="f-instruction_manual">取扱説明書</label>
-          </div>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="f-spare_parts_list" name="spare_parts_list">
-            <label class="form-check-label" for="f-spare_parts_list">予備品リスト</label>
-          </div>
-        </div>
+        <label class="form-label">備考</label>
+        <textarea class="form-control" id="f-notes1" name="notes1" rows="4"></textarea>
       </div>
     </div>
   </div>
@@ -292,20 +137,14 @@ const INITIAL_DATA = {{ (equipment | tojson) if equipment else 'null' }};
 
 // テキスト/select フィールド
 const TEXT_FIELDS = [
-  'equipment_name','model','work_type','location','manufacturer','op_status',
-  'series_no','unit_no','facility_no','facility_name','customer_code',
-  'category_l','category_m','category_s','dept_code',
-  'installed_at','removed_at','service_life','target_life',
-  'acquisition_cost','replacement_cost','asset_group','fixed_asset_no','disposal_limit',
-  'maintenance_method','importance','cost_impact',
-  'form_no','maintenance_form_id','spec','notes1','notes2',
+  'equipment_name','model','location','manufacturer','op_status',
+  'facility_no','facility_name',
+  'category_l','category_m','category_s',
+  'installed_at','service_life','notes1',
 ];
 
 // チェックボックスフィールド
-const BOOL_FIELDS = [
-  'legal_inspection','degradation_flag','upgrade_target','high_degradation',
-  'completion_docs','maintenance_manual','instruction_manual','spare_parts_list',
-];
+const BOOL_FIELDS = [];
 
 function getField(name) { return document.getElementById('f-' + name); }
 
@@ -400,32 +239,10 @@ function validate(data) {
     nameEl.classList.remove('is-invalid');
   }
 
-  // 日付チェック
-  if (data.installed_at && data.removed_at && data.installed_at > data.removed_at) {
-    const removedEl = getField('removed_at');
-    removedEl.classList.add('is-invalid');
-    document.getElementById('removed_at-err').style.display = 'block';
-    valid = false;
-  } else {
-    const removedEl = getField('removed_at');
-    if (removedEl) {
-      removedEl.classList.remove('is-invalid');
-      document.getElementById('removed_at-err').style.display = 'none';
-    }
-  }
-
   // 数値チェック
-  ['service_life','target_life'].forEach(f => {
+  ['service_life'].forEach(f => {
     const el = getField(f);
     if (el && el.value && (isNaN(el.value) || parseInt(el.value) < 1)) {
-      el.classList.add('is-invalid');
-      valid = false;
-    } else if (el) el.classList.remove('is-invalid');
-  });
-
-  ['acquisition_cost','replacement_cost'].forEach(f => {
-    const el = getField(f);
-    if (el && el.value && (isNaN(el.value) || parseFloat(el.value) < 0)) {
       el.classList.add('is-invalid');
       valid = false;
     } else if (el) el.classList.remove('is-invalid');
@@ -497,5 +314,6 @@ loadAutocomplete('manufacturer', 'dl-manufacturer');
 loadAutocomplete('location', 'dl-location');
 loadAutocomplete('facility_name', 'dl-facility_name');
 loadCategories();
+
 </script>
 {% endblock %}

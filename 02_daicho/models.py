@@ -1,4 +1,4 @@
-"""機器台帳 データアクセス層"""
+"""Equipment ledger data access layer"""
 import csv
 import io
 from datetime import date, datetime
@@ -8,86 +8,34 @@ import chardet
 
 from database import get_db
 
-# CSV列名 → DBカラム名マッピング
+# CSV column name → DB column name mapping
 CSV_COLUMN_MAP = {
-    "工種番号": "work_type",
-    "レコードID": "record_id",
-    "顧客コード": "customer_code",
-    "施設番号": "facility_no",
-    "施設名称": "facility_name",
-    "機器ID": "equipment_id",
-    "機器名称": "equipment_name",
-    "形式": "model",
-    "様式番号": "form_no",
-    "完成図書": "completion_docs",
-    "保点要領書": "maintenance_manual",
-    "取扱説明書": "instruction_manual",
-    "予備品リスト": "spare_parts_list",
-    "設置場所": "location",
-    "資産款": "asset_category1",
-    "資産項": "asset_category2",
-    "資産目": "asset_category3",
-    "資産節": "asset_category4",
-    "資産整項": "asset_category5",
-    "設置年月日": "installed_at",
-    "撤去年月日": "removed_at",
-    "更新前施設番号": "prev_facility_no",
-    "更新前機器ID": "prev_equipment_id",
-    "主要機器": "main_equipment",
-    "大分類": "category_l",
-    "中分類": "category_m",
-    "小分類": "category_s",
-    "耐用年数": "service_life",
-    "系列番号": "series_no",
-    "号機番号": "unit_no",
-    "記事１": "notes1",
-    "記事２": "notes2",
-    "製造所": "manufacturer",
-    "稼働状況": "op_status",
-    "保全方法": "maintenance_method",
-    "管理部署コード": "dept_code",
-    "資産グループ": "asset_group",
-    "固定資産番号": "fixed_asset_no",
-    "仕様": "spec",
-    "複数回測定値": "multi_measurement",
-    "許容限界値": "threshold",
-    "処分制限期間": "disposal_limit",
-    "法定点検有無": "legal_inspection",
-    "設備重要度": "importance",
-    "劣化予兆判断可否": "degradation_flag",
-    "コストインパクト": "cost_impact",
-    "高度化対象": "upgrade_target",
-    "劣化度大": "high_degradation",
-    "保守点検様式ID": "maintenance_form_id",
-    "排水区分": "drainage_class",
-    "削除フラグ": "deleted",
-    "更新日時": "updated_at",
-    "更新ユーザID": "updated_by",
-    "取得価額": "acquisition_cost",
-    "目標耐用年数": "target_life",
-    "再取得価額": "replacement_cost",
+    "Record ID":    "record_id",
+    "Asset Name":   "equipment_name",
+    "Model":        "model",
+    "Site Code":    "facility_no",
+    "Site Name":    "facility_name",
+    "Location":     "location",
+    "Category L":   "category_l",
+    "Category M":   "category_m",
+    "Category S":   "category_s",
+    "Status":       "op_status",
+    "Manufacturer": "manufacturer",
+    "Install Date": "installed_at",
+    "Service Life": "service_life",
+    "Notes":        "notes1",
 }
 
-# DBカラム名 → CSV列名 (逆引き)
+# DB column name → CSV column name (reverse lookup)
 DB_TO_CSV_MAP = {v: k for k, v in CSV_COLUMN_MAP.items()}
 
-INTEGER_FIELDS = {
-    "record_id", "equipment_id", "service_life", "target_life",
-    "acquisition_cost", "replacement_cost", "legal_inspection",
-    "degradation_flag", "upgrade_target", "high_degradation",
-    "completion_docs", "maintenance_manual", "instruction_manual",
-    "spare_parts_list", "main_equipment", "deleted",
-}
+INTEGER_FIELDS = {"record_id", "service_life", "deleted"}
 
-REAL_FIELDS = {"threshold"}
+REAL_FIELDS: set = set()
 
-DATE_FIELDS = {"installed_at", "removed_at"}
+DATE_FIELDS = {"installed_at"}
 
-BOOL_CSV_FIELDS = {
-    "completion_docs", "maintenance_manual", "instruction_manual",
-    "spare_parts_list", "main_equipment", "legal_inspection",
-    "degradation_flag", "upgrade_target", "high_degradation",
-}
+BOOL_CSV_FIELDS: set = set()
 
 
 def _coerce(field, value):
@@ -124,9 +72,6 @@ def _build_where(filters):
     if filters.get("facility_no"):
         clauses.append("facility_no = ?")
         params.append(filters["facility_no"])
-    if filters.get("work_type"):
-        clauses.append("work_type = ?")
-        params.append(filters["work_type"])
     if filters.get("category_l"):
         clauses.append("category_l = ?")
         params.append(filters["category_l"])
@@ -250,7 +195,6 @@ def duplicate_equipment(eq_id):
         return None
     row.pop("id", None)
     row.pop("record_id", None)
-    row["equipment_id"] = None
     row["created_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     row["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     row["deleted"] = 0
@@ -284,7 +228,7 @@ def get_categories():
 
 
 def get_autocomplete(field, q):
-    """オートコンプリート候補を返す"""
+    """Return autocomplete candidates"""
     allowed = {"equipment_name", "manufacturer", "location", "facility_name", "category_l", "category_m", "category_s"}
     if field not in allowed:
         return []
