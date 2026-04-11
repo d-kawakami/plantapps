@@ -87,18 +87,17 @@
   .btn-speak.error { background: #fed7d7; color: #9b2335; border-color: #fc8181; font-size: 10px; padding: 4px 5px; }
   #speak-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a202c; color: #fff; padding: 8px 18px; border-radius: 6px; font-size: 13px; display: none; z-index: 9999; max-width: 90vw; word-break: break-all; line-height: 1.6; }
   #speak-toast a { color: #90cdf4; text-decoration: underline; }
-  /* 機器台帳検索ウィジェット */
-  .eq-widget { background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 6px; padding: 0; margin-bottom: 10px; overflow: hidden; }
+  /* 機器台帳検索ボタン */
+  .btn-eq { background: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 4px; cursor: pointer; white-space: nowrap; }
+  .btn-eq:hover { background: #bee3f8; }
+  /* 機器台帳検索結果パネル */
+  .eq-widget { background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 6px; margin-bottom: 10px; overflow: hidden; display: none; }
+  .eq-widget[open] { display: block; }
   .eq-widget summary { cursor: pointer; font-size: 12px; font-weight: 700; color: #2b6cb0; padding: 8px 14px; display: flex; align-items: center; gap: 6px; user-select: none; list-style: none; }
   .eq-widget summary::-webkit-details-marker { display: none; }
   .eq-widget summary::before { content: '▶'; font-size: 9px; transition: transform 0.15s; }
   .eq-widget[open] summary::before { transform: rotate(90deg); }
   .eq-widget-body { padding: 0 14px 12px; }
-  .eq-search-row { display: flex; gap: 6px; margin-bottom: 8px; }
-  .eq-search-input { flex: 1; padding: 6px 10px; border: 1px solid #bee3f8; border-radius: 4px; font-size: 13px; font-family: inherit; }
-  .eq-search-input:focus { outline: none; border-color: #63b3ed; box-shadow: 0 0 0 2px rgba(99,179,237,0.3); }
-  .eq-search-btn { padding: 6px 14px; background: #3182ce; color: #fff; border: none; border-radius: 4px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
-  .eq-search-btn:active { background: #2b6cb0; }
   .eq-result-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: #fff; border: 1px solid #bee3f8; border-radius: 5px; margin-bottom: 4px; text-decoration: none; color: #1a202c; font-size: 12px; transition: background 0.12s; }
   .eq-result-item:hover { background: #dbeafe; }
   .eq-result-name { font-weight: 700; min-width: 0; }
@@ -112,7 +111,6 @@
   .eq-msg-loading { color: #718096; }
   .eq-msg-empty   { color: #999; }
   .eq-msg-error   { color: #c53030; }
-  .eq-hint { font-size: 11px; color: #4a90d9; padding: 2px 2px 6px; }
 </style>
 </head>
 <body>
@@ -163,25 +161,18 @@
   <label>日付（終了）
     <input type="date" name="date_to" value="{{ date_to }}">
   </label>
-  <div style="display:flex; gap:8px; align-self:flex-end;">
+  <div style="display:flex; gap:8px; align-self:flex-end; flex-wrap:wrap;">
     <button type="submit" class="btn btn-primary">検索</button>
     <a href="{{ url_for('index') }}" class="btn" style="background:#e2e8f0; color:#333;">クリア</a>
+    <button type="button" class="btn btn-eq" onclick="eqSearchFromFilter()">&#128269; 機器台帳で検索</button>
   </div>
 </div>
 </form>
 
-<!-- 機器台帳検索ウィジェット -->
+<!-- 機器台帳検索結果パネル（機器台帳で検索ボタン押下時に展開） -->
 <details class="eq-widget" id="eq-widget">
-  <summary>&#128269; 機器台帳で機器を検索</summary>
+  <summary id="eq-widget-summary">&#128269; 機器台帳の検索結果</summary>
   <div class="eq-widget-body">
-    <p class="eq-hint">機器名・設置場所などを入力して機器台帳を参照できます</p>
-    <div class="eq-search-row">
-      <input type="text" id="eq-input" class="eq-search-input"
-             placeholder="例: ポンプ、送風機、5号"
-             oninput="eqSearchDebounce()"
-             onkeydown="if(event.key==='Enter'){event.preventDefault();eqSearch();}">
-      <button class="eq-search-btn" onclick="eqSearch()">検索</button>
-    </div>
     <div id="eq-results"></div>
   </div>
 </details>
@@ -423,24 +414,30 @@
   }
 
   /* =====================================================
-     機器台帳検索ウィジェット
+     機器台帳検索（フィルターバーのキーワードをそのまま流用）
      ===================================================== */
-  var _eqTimer = null;
-
-  function eqSearchDebounce() {
-    clearTimeout(_eqTimer);
-    _eqTimer = setTimeout(eqSearch, 400);
-  }
-
-  function eqSearch() {
-    clearTimeout(_eqTimer);
-    var q = document.getElementById('eq-input').value.trim();
+  function eqSearchFromFilter() {
+    var q         = document.querySelector('input[name="q"]').value.trim();
+    var widget    = document.getElementById('eq-widget');
+    var summary   = document.getElementById('eq-widget-summary');
     var resultsEl = document.getElementById('eq-results');
-    if (!q) { resultsEl.innerHTML = ''; return; }
 
-    var h = window.location.hostname;
-    var url = window.location.protocol + '//' + h + ':5002/api/equipment/search'
-              + '?name=' + encodeURIComponent(q) + '&limit=8';
+    if (!q) {
+      alert('キーワード欄に機器名を入力してから「機器台帳で検索」を押してください。');
+      document.querySelector('input[name="q"]').focus();
+      return;
+    }
+
+    /* パネルを開く */
+    widget.style.display = 'block';
+    widget.open = true;
+    summary.textContent = '\uD83D\uDD0D 機器台帳の検索結果 ― 「' + q + '」';
+    /* サマリーにスクロール */
+    widget.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    var h    = window.location.hostname;
+    var base = window.location.protocol + '//' + h + ':5002';
+    var url  = base + '/api/equipment/search?name=' + encodeURIComponent(q) + '&limit=10';
 
     resultsEl.innerHTML = '<div class="eq-msg eq-msg-loading">&#8987; 検索中...</div>';
 
@@ -451,11 +448,11 @@
       })
       .then(function(json) {
         if (!json.success || !json.data.items.length) {
-          resultsEl.innerHTML = '<div class="eq-msg eq-msg-empty">「' + _esc(q) + '」に該当する機器が見つかりませんでした</div>';
+          resultsEl.innerHTML = '<div class="eq-msg eq-msg-empty">「' + _esc(q) + '」に一致する機器は登録されていません</div>';
           return;
         }
-        var base = window.location.protocol + '//' + h + ':5002';
-        var html = json.data.items.map(function(eq) {
+        var items = json.data.items;
+        var html  = items.map(function(eq) {
           var sc = eq.op_status === '稼働中' ? 'eq-badge-active'
                  : eq.op_status === '停止'   ? 'eq-badge-stop' : 'eq-badge-other';
           return '<a href="' + base + '/equipment/' + eq.id + '" target="_blank" class="eq-result-item">'
@@ -465,13 +462,15 @@
             + '<span class="eq-arrow">詳細&nbsp;&#x2197;</span>'
             + '</a>';
         }).join('');
-        resultsEl.innerHTML = html
-          + '<div class="eq-msg" style="color:#718096;margin-top:4px;">'
-          + json.data.total + ' 件中 ' + json.data.items.length + ' 件表示'
-          + (json.data.total > json.data.items.length
-              ? '　<a href="' + base + '/equipment?q=' + encodeURIComponent(q) + '" target="_blank" style="color:#3182ce;">すべて見る&nbsp;&#x2197;</a>'
-              : '')
-          + '</div>';
+
+        var footer = '<div class="eq-msg" style="color:#718096; margin-top:6px;">'
+          + json.data.total + ' 件中 ' + items.length + ' 件表示';
+        if (json.data.total > items.length) {
+          footer += '&emsp;<a href="' + base + '/equipment?q=' + encodeURIComponent(q)
+                  + '" target="_blank" style="color:#3182ce;">すべて見る&nbsp;&#x2197;</a>';
+        }
+        footer += '</div>';
+        resultsEl.innerHTML = html + footer;
       })
       .catch(function() {
         resultsEl.innerHTML = '<div class="eq-msg eq-msg-error">'
