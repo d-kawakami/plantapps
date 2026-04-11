@@ -148,10 +148,11 @@
 (function () {
   var h = window.location.hostname;
   var PORTS = { handover: 5003, equipment: 5002, inspection: 5001, photo: 5004 };
+  var PATHS = { handover: '/',  equipment: '/',  inspection: '/',  photo: '/photo' };
   var proto = window.location.protocol;  // http: or https:
   Object.keys(PORTS).forEach(function (key) {
     var el = document.getElementById('plant-nav-' + key);
-    if (el) el.href = proto + '//' + h + ':' + PORTS[key];
+    if (el) el.href = proto + '//' + h + ':' + PORTS[key] + (PATHS[key] || '/');
   });
   /* body にクラスを付与してコンテンツ余白を確保 */
   document.body.classList.add('has-plant-nav');
