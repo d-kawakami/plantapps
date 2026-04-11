@@ -25,10 +25,10 @@ app.jinja_loader = ChoiceLoader([
     FileSystemLoader(_common_tpl),
 ])
 DB_PATH = os.path.join(BASE_DIR, 'note.db')
-# 同ディレクトリの note.xlsx → なければ親ディレクトリの 引継ぎノート電子版.xlsx を探す
+# 同ディレクトリの note.xlsx → なければ親ディレクトリの 電子版.xlsx を探す
 XLSX_PATH = os.path.join(BASE_DIR, 'note.xlsx')
-if not os.path.exists(XLSX_PATH):
-    XLSX_PATH = os.path.join(BASE_DIR, '..', '引継ぎノート電子版.xlsx')
+#if not os.path.exists(XLSX_PATH):
+#    XLSX_PATH = os.path.join(BASE_DIR, '..', '引継ぎノート電子版.xlsx')
 MEDIA_DIR = os.path.join(BASE_DIR, 'media')
 PER_PAGE = 50
 MAX_SCORE_ROWS = 3000  # 関連度計算の対象上限（メモリ節約）
