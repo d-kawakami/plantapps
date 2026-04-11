@@ -5,6 +5,7 @@ Flask 日常点検アプリ
 import io
 import json
 import os
+import shutil
 import contextlib
 import tempfile
 from pathlib import Path
@@ -24,9 +25,22 @@ app.jinja_loader = ChoiceLoader([
 
 # ─── 棟→曜日マップ読み込み ─────────────────────────────────
 _DAY_MAP_PATH = Path(__file__).parent / "building_day_map.json"
+_DAY_MAP_DEFAULT_PATH = Path(__file__).parent / "building_day_map.default.json"
+
+def _ensure_day_map():
+    """building_day_map.json がなければ default.json からコピーして作成する"""
+    if not _DAY_MAP_PATH.exists():
+        if _DAY_MAP_DEFAULT_PATH.exists():
+            shutil.copy(_DAY_MAP_DEFAULT_PATH, _DAY_MAP_PATH)
+            print(f"building_day_map.json が見つからないため {_DAY_MAP_DEFAULT_PATH.name} からコピーしました。")
+        else:
+            raise FileNotFoundError(
+                "building_day_map.json も building_day_map.default.json も見つかりません。"
+            )
 
 def _load_day_buildings() -> dict:
     """building_day_map.json を読み込み、曜日番号→施設名リストの辞書を返す"""
+    _ensure_day_map()
     with open(_DAY_MAP_PATH, encoding="utf-8") as f:
         data = json.load(f)
     day_buildings: dict = {}
