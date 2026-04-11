@@ -1,6 +1,6 @@
 # Plant Apps
 
-An integrated suite of four web applications designed for plant engineers working at water treatment and industrial facilities.
+An integrated suite of four web applications designed for plant engineers working at industrial facilities.
 Each app works independently but gains additional value when used together through shared navigation and cross-app data links.
 
 **Repository:** https://github.com/d-kawakami/plantapps
