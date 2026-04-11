@@ -3,6 +3,7 @@ Flask 日常点検アプリ
 起動: python app.py
 """
 import io
+import json
 import os
 import contextlib
 import tempfile
@@ -21,6 +22,19 @@ app.jinja_loader = ChoiceLoader([
     FileSystemLoader(_common_tpl),
 ])
 
+# ─── 棟→曜日マップ読み込み ─────────────────────────────────
+_DAY_MAP_PATH = Path(__file__).parent / "building_day_map.json"
+
+def _load_day_buildings() -> dict:
+    """building_day_map.json を読み込み、曜日番号→施設名リストの辞書を返す"""
+    with open(_DAY_MAP_PATH, encoding="utf-8") as f:
+        data = json.load(f)
+    day_buildings: dict = {}
+    for building, day in data["buildings"].items():
+        day_buildings.setdefault(day, []).append(building)
+    return day_buildings
+
+
 # ─── 起動時にDB初期化 ──────────────────────────────────────
 with app.app_context():
     init_db()
@@ -30,7 +44,7 @@ with app.app_context():
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", day_buildings=_load_day_buildings())
 
 
 @app.route("/inspect/<int:day>")

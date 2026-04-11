@@ -4,308 +4,320 @@
 # データ構造:
 #   code        : 点検番号 (例: "1-1")
 #   building    : 建物名   (building_day_map.json の表示名を使用)
-#   location    : 点検場所 (例: "エレベーター機械室")
+#   location    : 点検場所 (building_day_map.json の locations 配列の値を使用)
 #   description : 点検内容 (詳細、空欄可)
 #   day_of_week : 曜日     (1=月 2=火 3=水 4=木 5=金)
 #   week_filter : 週番号   (None=毎週 1=第1週 2=第2週 3=第3週 4=第4週)
 #   sort_order  : 表示順
+#
+# _SEED のフォーマット:
+#   (code, building_idx, location_idx, day_of_week, week_filter, sort_order)
+#   building_idx : building_day_map.json の "buildings" キーの順序インデックス
+#   location_idx : その建物の "locations" 配列のインデックス
 
 import json
 from pathlib import Path
 
-def _load_building_name_map() -> dict:
-    """building_day_map.default.json の元施設名を building_day_map.json の表示名にマッピングする。
-    building_day_map.json が存在しない場合は default.json の名前をそのまま使う。
-    両ファイルは同じ順序で施設が並んでいることを前提とする。"""
+
+def _load_names():
+    """building_day_map.json が存在すればその名前を、なければ default.json の名前を使う。"""
     base = Path(__file__).parent
-    default_path = base / "building_day_map.default.json"
-    current_path = base / "building_day_map.json"
+    path = base / "building_day_map.json"
+    if not path.exists():
+        path = base / "building_day_map.default.json"
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    buildings = list(data["buildings"].keys())
+    locations = [data["locations"][b] for b in buildings]
+    return buildings, locations
 
-    with open(default_path, encoding="utf-8") as f:
-        default = json.load(f)
-    original_names = list(default["buildings"].keys())
 
-    if current_path.exists():
-        with open(current_path, encoding="utf-8") as f:
-            current = json.load(f)
-        display_names = list(current["buildings"].keys())
-    else:
-        display_names = original_names  # フォールバック: 元の名前をそのまま使用
+_BUILDINGS, _LOCATIONS = _load_names()
 
-    return dict(zip(original_names, display_names))
 
-_BUILDING_NAME_MAP = _load_building_name_map()
+def _item(code, b_idx, l_idx, dow, wf, sort):
+    return {
+        "code": code,
+        "building": _BUILDINGS[b_idx],
+        "location": _LOCATIONS[b_idx][l_idx],
+        "description": "",
+        "day_of_week": dow,
+        "week_filter": wf,
+        "sort_order": sort,
+    }
 
-def _b(original_name: str) -> str:
-    """元施設名 → building_day_map.json の表示名に変換する。"""
-    return _BUILDING_NAME_MAP.get(original_name, original_name)
 
-INSPECTION_ITEMS = [
+# fmt: off
+# (code, building_idx, location_idx, day_of_week, week_filter, sort_order)
+_SEED = [
 
     # ─────────────────────────────────────────
     # 月曜日 (day_of_week=1)
     # ─────────────────────────────────────────
 
-    # 沈砂池棟 (1-1 〜 1-26)
-    {"code": "1-1",  "building": _b("沈砂池棟"), "location": "エレベーター機械室",   "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 1},
-    {"code": "1-2",  "building": _b("沈砂池棟"), "location": "沈砂池（1系）",        "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 2},
-    {"code": "1-3",  "building": _b("沈砂池棟"), "location": "沈砂池（2系）",        "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 3},
-    {"code": "1-4",  "building": _b("沈砂池棟"), "location": "スクリーン（1系）",    "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 4},
-    {"code": "1-5",  "building": _b("沈砂池棟"), "location": "スクリーン（2系）",    "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 5},
-    {"code": "1-6",  "building": _b("沈砂池棟"), "location": "除塵機（1号）",        "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 6},
-    {"code": "1-7",  "building": _b("沈砂池棟"), "location": "除塵機（2号）",        "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 7},
-    {"code": "1-8",  "building": _b("沈砂池棟"), "location": "沈砂除去ポンプ（1号）","description": "", "day_of_week": 1, "week_filter": None, "sort_order": 8},
-    {"code": "1-9",  "building": _b("沈砂池棟"), "location": "沈砂除去ポンプ（2号）","description": "", "day_of_week": 1, "week_filter": None, "sort_order": 9},
-    {"code": "1-10", "building": _b("沈砂池棟"), "location": "砂洗浄機",             "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 10},
-    {"code": "1-11", "building": _b("沈砂池棟"), "location": "グリットコンベア",     "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 11},
-    {"code": "1-12", "building": _b("沈砂池棟"), "location": "流量計（流入）",       "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 12},
-    {"code": "1-13", "building": _b("沈砂池棟"), "location": "流量計（越流）",       "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 13},
-    {"code": "1-14", "building": _b("沈砂池棟"), "location": "水位計",               "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 14},
-    {"code": "1-15", "building": _b("沈砂池棟"), "location": "ポンプ制御盤",         "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 15},
-    {"code": "1-16", "building": _b("沈砂池棟"), "location": "受変電設備",           "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 16},
-    {"code": "1-17", "building": _b("沈砂池棟"), "location": "コンプレッサー室",     "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 17},
-    {"code": "1-18", "building": _b("沈砂池棟"), "location": "換気設備",             "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 18},
-    {"code": "1-19", "building": _b("沈砂池棟"), "location": "排水ポンプ",           "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 19},
-    {"code": "1-20", "building": _b("沈砂池棟"), "location": "越流堰",               "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 20},
-    {"code": "1-21", "building": _b("沈砂池棟"), "location": "ゲート（1号）",        "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 21},
-    {"code": "1-22", "building": _b("沈砂池棟"), "location": "ゲート（2号）",        "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 22},
-    {"code": "1-23", "building": _b("沈砂池棟"), "location": "消火設備",             "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 23},
-    {"code": "1-24", "building": _b("沈砂池棟"), "location": "建物外部（東側）",     "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 24},
-    {"code": "1-25", "building": _b("沈砂池棟"), "location": "建物外部（西側）",     "description": "", "day_of_week": 1, "week_filter": None, "sort_order": 25},
-    {"code": "1-26", "building": _b("沈砂池棟"), "location": "その他（特記事項確認）","description": "", "day_of_week": 1, "week_filter": None, "sort_order": 26},
+    # building[0] (1-1 〜 1-26)
+    ('1-1',  0,  0, 1, None,  1),
+    ('1-2',  0,  1, 1, None,  2),
+    ('1-3',  0,  2, 1, None,  3),
+    ('1-4',  0,  3, 1, None,  4),
+    ('1-5',  0,  4, 1, None,  5),
+    ('1-6',  0,  5, 1, None,  6),
+    ('1-7',  0,  6, 1, None,  7),
+    ('1-8',  0,  7, 1, None,  8),
+    ('1-9',  0,  8, 1, None,  9),
+    ('1-10', 0,  9, 1, None, 10),
+    ('1-11', 0, 10, 1, None, 11),
+    ('1-12', 0, 11, 1, None, 12),
+    ('1-13', 0, 12, 1, None, 13),
+    ('1-14', 0, 13, 1, None, 14),
+    ('1-15', 0, 14, 1, None, 15),
+    ('1-16', 0, 15, 1, None, 16),
+    ('1-17', 0, 16, 1, None, 17),
+    ('1-18', 0, 17, 1, None, 18),
+    ('1-19', 0, 18, 1, None, 19),
+    ('1-20', 0, 19, 1, None, 20),
+    ('1-21', 0, 20, 1, None, 21),
+    ('1-22', 0, 21, 1, None, 22),
+    ('1-23', 0, 22, 1, None, 23),
+    ('1-24', 0, 23, 1, None, 24),
+    ('1-25', 0, 24, 1, None, 25),
+    ('1-26', 0, 25, 1, None, 26),
 
     # ─────────────────────────────────────────
     # 火曜日 (day_of_week=2)
     # ─────────────────────────────────────────
 
-    # 処理水再利用設備 (2-1 〜 2-18)
-    {"code": "2-1",  "building": _b("処理水再利用設備"), "location": "再利用ポンプ（1号）",    "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 1},
-    {"code": "2-2",  "building": _b("処理水再利用設備"), "location": "再利用ポンプ（2号）",    "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 2},
-    {"code": "2-3",  "building": _b("処理水再利用設備"), "location": "再利用ポンプ（3号）",    "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 3},
-    {"code": "2-4",  "building": _b("処理水再利用設備"), "location": "流量計",                 "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 4},
-    {"code": "2-5",  "building": _b("処理水再利用設備"), "location": "逆洗用ポンプ",           "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 5},
-    {"code": "2-6",  "building": _b("処理水再利用設備"), "location": "ろ過池（1系）",          "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 6},
-    {"code": "2-7",  "building": _b("処理水再利用設備"), "location": "ろ過池（2系）",          "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 7},
-    {"code": "2-8",  "building": _b("処理水再利用設備"), "location": "ろ過池（3系）",          "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 8},
-    {"code": "2-9",  "building": _b("処理水再利用設備"), "location": "水質計器室",             "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 9},
-    {"code": "2-10", "building": _b("処理水再利用設備"), "location": "制御盤",                 "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 10},
-    {"code": "2-11", "building": _b("処理水再利用設備"), "location": "受水槽",                 "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 11},
-    {"code": "2-12", "building": _b("処理水再利用設備"), "location": "高架水槽",               "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 12},
-    {"code": "2-13", "building": _b("処理水再利用設備"), "location": "逆浸透膜設備",           "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 13},
-    {"code": "2-14", "building": _b("処理水再利用設備"), "location": "薬品注入設備（防錆剤）", "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 14},
-    {"code": "2-15", "building": _b("処理水再利用設備"), "location": "UV殺菌装置",            "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 15},
-    {"code": "2-16", "building": _b("処理水再利用設備"), "location": "配管・バルブ類",         "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 16},
-    {"code": "2-17", "building": _b("処理水再利用設備"), "location": "排水設備",               "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 17},
-    {"code": "2-18", "building": _b("処理水再利用設備"), "location": "建物外部・周辺",         "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 18},
+    # building[1] (2-1 〜 2-18)
+    ('2-1',  1,  0, 2, None,  1),
+    ('2-2',  1,  1, 2, None,  2),
+    ('2-3',  1,  2, 2, None,  3),
+    ('2-4',  1,  3, 2, None,  4),
+    ('2-5',  1,  4, 2, None,  5),
+    ('2-6',  1,  5, 2, None,  6),
+    ('2-7',  1,  6, 2, None,  7),
+    ('2-8',  1,  7, 2, None,  8),
+    ('2-9',  1,  8, 2, None,  9),
+    ('2-10', 1,  9, 2, None, 10),
+    ('2-11', 1, 10, 2, None, 11),
+    ('2-12', 1, 11, 2, None, 12),
+    ('2-13', 1, 12, 2, None, 13),
+    ('2-14', 1, 13, 2, None, 14),
+    ('2-15', 1, 14, 2, None, 15),
+    ('2-16', 1, 15, 2, None, 16),
+    ('2-17', 1, 16, 2, None, 17),
+    ('2-18', 1, 17, 2, None, 18),
 
-    # 塩素接触棟 (3-1 〜 3-9)
-    {"code": "3-1", "building": _b("塩素接触棟"), "location": "塩素接触池（1系）",     "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 1},
-    {"code": "3-2", "building": _b("塩素接触棟"), "location": "塩素接触池（2系）",     "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 2},
-    {"code": "3-3", "building": _b("塩素接触棟"), "location": "次亜塩素酸注入設備",   "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 3},
-    {"code": "3-4", "building": _b("塩素接触棟"), "location": "注入ポンプ（1号）",     "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 4},
-    {"code": "3-5", "building": _b("塩素接触棟"), "location": "注入ポンプ（2号）",     "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 5},
-    {"code": "3-6", "building": _b("塩素接触棟"), "location": "残塩計",               "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 6},
-    {"code": "3-7", "building": _b("塩素接触棟"), "location": "流量計",               "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 7},
-    {"code": "3-8", "building": _b("塩素接触棟"), "location": "制御盤・計器類",       "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 8},
-    {"code": "3-9", "building": _b("塩素接触棟"), "location": "建物外部",             "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 9},
+    # building[2] (3-1 〜 3-9)
+    ('3-1', 2, 0, 2, None, 1),
+    ('3-2', 2, 1, 2, None, 2),
+    ('3-3', 2, 2, 2, None, 3),
+    ('3-4', 2, 3, 2, None, 4),
+    ('3-5', 2, 4, 2, None, 5),
+    ('3-6', 2, 5, 2, None, 6),
+    ('3-7', 2, 6, 2, None, 7),
+    ('3-8', 2, 7, 2, None, 8),
+    ('3-9', 2, 8, 2, None, 9),
 
-    # 汚泥調整層 (4-1 〜 4-14)
-    {"code": "4-1",  "building": _b("汚泥調整槽"), "location": "制御室 汚泥調整槽10・20",      "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 1},
-    {"code": "4-2",  "building": _b("汚泥調整槽"), "location": "空調  汚泥調整槽10・20",      "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 2},
-    {"code": "4-3",  "building": _b("汚泥調整槽"), "location": "脱臭機室  汚泥調整槽10・20",  "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 3},
-    {"code": "4-4",  "building": _b("汚泥調整槽"), "location": "汚泥ポンプ室  汚泥調整槽10・20",  "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 4},
-    {"code": "4-5",  "building": _b("汚泥調整槽"), "location": "かき寄せ機  汚泥調整槽10・20",  "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 5},
-    {"code": "4-6",  "building": _b("汚泥調整槽"), "location": "その他  汚泥調整槽10・20",          "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 6},
-    {"code": "4-7",  "building": _b("汚泥調整槽"), "location": "制御室 汚泥調整層30-60",          "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 7},
-    {"code": "4-8",  "building": _b("汚泥調整槽"), "location": "電気室  汚泥調整層30-60",          "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 8},
-    {"code": "4-9",  "building": _b("汚泥調整槽"), "location": "空調・換気ファン  汚泥調整層30-60", "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 9},
-    {"code": "4-10", "building": _b("汚泥調整槽"), "location": "脱臭機室  汚泥調整層30-60",         "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 10},
-    {"code": "4-11", "building": _b("汚泥調整槽"), "location": "汚泥ポンプ室  汚泥調整層30-60",     "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 11},
-    {"code": "4-12", "building": _b("汚泥調整槽"), "location": "かき寄せ機  汚泥調整層30-60",       "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 12},
-    {"code": "4-13", "building": _b("汚泥調整槽"), "location": "脱臭機室  汚泥調整層30-60",         "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 13},
-    {"code": "4-14", "building": _b("汚泥調整槽"), "location": "その他  汚泥調整層30-60",           "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 14},
+    # building[3] (4-1 〜 4-14)
+    ('4-1',  3,  0, 2, None,  1),
+    ('4-2',  3,  1, 2, None,  2),
+    ('4-3',  3,  2, 2, None,  3),
+    ('4-4',  3,  3, 2, None,  4),
+    ('4-5',  3,  4, 2, None,  5),
+    ('4-6',  3,  5, 2, None,  6),
+    ('4-7',  3,  6, 2, None,  7),
+    ('4-8',  3,  7, 2, None,  8),
+    ('4-9',  3,  8, 2, None,  9),
+    ('4-10', 3,  9, 2, None, 10),
+    ('4-11', 3, 10, 2, None, 11),
+    ('4-12', 3, 11, 2, None, 12),
+    ('4-13', 3,  9, 2, None, 13),
+    ('4-14', 3, 12, 2, None, 14),
 
-    # 管廊（雑排水ポンプ） (5-1 〜 5-3)
-    {"code": "5-1", "building": _b("管廊（雑排水ポンプ）"), "location": "管理棟～二次処理棟(No.71・81)", "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 1},
-    {"code": "5-2", "building": _b("管廊（雑排水ポンプ）"), "location": "二次処理棟管廊(No.61)", "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 2},
-    {"code": "5-3", "building": _b("管廊（雑排水ポンプ）"), "location": "二次処理棟～原水ポンプ室(No.A1・A2)",         "description": "", "day_of_week": 2, "week_filter": None, "sort_order": 3},
+    # building[4] (5-1 〜 5-3)
+    ('5-1', 4, 0, 2, None, 1),
+    ('5-2', 4, 1, 2, None, 2),
+    ('5-3', 4, 2, 2, None, 3),
 
     # ─────────────────────────────────────────
     # 水曜日 (day_of_week=3)  ※週フィルタあり
     # ─────────────────────────────────────────
 
-    # 第三ポンプ施設（第1週）
-    {"code": "6-1",  "building": _b("第三ポンプ施設"), "location": "高圧電気室",   "description": "", "day_of_week": 3, "week_filter": 1, "sort_order": 1},
-    {"code": "6-2",  "building": _b("第三ポンプ施設"), "location": "換気機械室",   "description": "", "day_of_week": 3, "week_filter": 1, "sort_order": 2},
-    {"code": "6-3",  "building": _b("第三ポンプ施設"), "location": "消音器室",   "description": "", "day_of_week": 3, "week_filter": 1, "sort_order": 3},
-    {"code": "6-4",  "building": _b("第三ポンプ施設"), "location": "発電機室",        "description": "", "day_of_week": 3, "week_filter": 1, "sort_order": 4},
-    {"code": "6-5",  "building": _b("第三ポンプ施設"), "location": "ガスタービン点検",     "description": "", "day_of_week": 3, "week_filter": 1, "sort_order": 5},
-    {"code": "6-6",  "building": _b("第三ポンプ施設"), "location": "燃料サービスタンク室",  "description": "", "day_of_week": 3, "week_filter": 1, "sort_order": 6},
-    {"code": "6-7",  "building": _b("第三ポンプ施設"), "location": "制御室",            "description": "", "day_of_week": 3, "week_filter": 1, "sort_order": 7},
-    {"code": "6-8",  "building": _b("第三ポンプ施設"), "location": "消火栓ポンプ室",        "description": "", "day_of_week": 3, "week_filter": 1, "sort_order": 8},
-    {"code": "6-9",  "building": _b("第三ポンプ施設"), "location": "ボンベ室","description": "", "day_of_week": 3, "week_filter": 1, "sort_order": 9},
-    {"code": "6-10",  "building": _b("第三ポンプ施設"), "location": "脱臭機室","description": "", "day_of_week": 3, "week_filter": 1, "sort_order": 10},
-    {"code": "6-11",  "building": _b("第三ポンプ施設"), "location": "低圧電気室","description": "", "day_of_week": 3, "week_filter": 1, "sort_order": 11},
-    {"code": "6-12",  "building": _b("第三ポンプ施設"), "location": "換気機械室","description": "", "day_of_week": 3, "week_filter": 1, "sort_order": 12},
-    {"code": "6-13",  "building": _b("第三ポンプ施設"), "location": "ろ過水自動給水装置","description": "", "day_of_week": 3, "week_filter": 1, "sort_order": 13},
-    {"code": "6-14",  "building": _b("第三ポンプ施設"), "location": "流量計室","description": "", "day_of_week": 3, "week_filter": 1, "sort_order": 14},
-    {"code": "6-15",  "building": _b("第三ポンプ施設"), "location": "電動機室","description": "", "day_of_week": 3, "week_filter": 1, "sort_order": 15},
-    {"code": "6-16",  "building": _b("第三ポンプ施設"), "location": "汚水ポンプ","description": "", "day_of_week": 3, "week_filter": 1, "sort_order": 16},
-    {"code": "6-17",  "building": _b("第三ポンプ施設"),	"location": "床排水ポンプ","description":"","day_of_week" :3,"week_filter" :1,"sort_order" :17},
-    {"code": "6-18",  "building": _b("第三ポンプ施設"), "location": "燃料タンク","description":"","day_of_week" :3,"week_filter" :1,"sort_order" :18},
-    {"code": "6-19",  "building": _b("第三ポンプ施設"), "location": "各ゲート","description":"","day_of_week" :3,"week_filter" :1,"sort_order" :19},
-    {"code": "6-20",  "building": _b("第三ポンプ施設"), "location": "吐出井流量計ピット","description":"","day_of_week" :3,"week_filter" :1,"sort_order" :20},
-    {"code": "6-21",  "building": _b("第三ポンプ施設"), "location": "PCB倉庫","description":"","day_of_week" :3,"week_filter" :1,"sort_order" :21},
+    # building[6] 第1週 (6-1 〜 6-21)
+    ('6-1',  6,  0, 3, 1,  1),
+    ('6-2',  6,  1, 3, 1,  2),
+    ('6-3',  6,  2, 3, 1,  3),
+    ('6-4',  6,  3, 3, 1,  4),
+    ('6-5',  6,  4, 3, 1,  5),
+    ('6-6',  6,  5, 3, 1,  6),
+    ('6-7',  6,  6, 3, 1,  7),
+    ('6-8',  6,  7, 3, 1,  8),
+    ('6-9',  6,  8, 3, 1,  9),
+    ('6-10', 6,  9, 3, 1, 10),
+    ('6-11', 6, 10, 3, 1, 11),
+    ('6-12', 6,  1, 3, 1, 12),
+    ('6-13', 6, 11, 3, 1, 13),
+    ('6-14', 6, 12, 3, 1, 14),
+    ('6-15', 6, 13, 3, 1, 15),
+    ('6-16', 6, 14, 3, 1, 16),
+    ('6-17', 6, 15, 3, 1, 17),
+    ('6-18', 6, 16, 3, 1, 18),
+    ('6-19', 6, 17, 3, 1, 19),
+    ('6-20', 6, 18, 3, 1, 20),
+    ('6-21', 6, 19, 3, 1, 21),
 
-    # 第二ポンプ施設（第2週）
-    {"code": "7-1",  "building": _b("第二ポンプ施設"), "location": "制御室",   "description": "", "day_of_week": 3, "week_filter": 2, "sort_order": 1},
-    {"code": "7-2",  "building": _b("第二ポンプ施設"), "location": "電気室",   "description": "", "day_of_week": 3, "week_filter": 2, "sort_order": 2},
-    {"code": "7-3",  "building": _b("第二ポンプ施設"), "location": "消火栓ポンプ室", "description": "", "day_of_week": 3, "week_filter": 2, "sort_order": 3},
-    {"code": "7-4",  "building": _b("第二ポンプ施設"), "location": "ポンプ室",    "description": "", "day_of_week": 3, "week_filter": 2, "sort_order": 4},
-    {"code": "7-5",  "building": _b("第二ポンプ施設"), "location": "エンジン",    "description": "", "day_of_week": 3, "week_filter": 2, "sort_order": 5},
-    {"code": "7-6",  "building": _b("第二ポンプ施設"), "location": "ポンプ",      "description": "", "day_of_week": 3, "week_filter": 2, "sort_order": 6},
-    {"code": "7-7",  "building": _b("第二ポンプ施設"), "location": "換気機械室",  "description": "", "day_of_week": 3, "week_filter": 2, "sort_order": 7},
-    {"code": "7-8",  "building": _b("第二ポンプ施設"), "location": "スクリーン",  "description": "", "day_of_week": 3, "week_filter": 2, "sort_order": 8},
-    {"code": "7-9",  "building": _b("第二ポンプ施設"), "location": "燃料タンク", "description": "", "day_of_week": 3, "week_filter": 2, "sort_order": 9},
-    {"code": "7-10", "building": _b("第二ポンプ施設"), "location": "その他",     "description": "", "day_of_week": 3, "week_filter": 2, "sort_order": 10},
+    # building[5] 第2週 (7-1 〜 7-10)
+    ('7-1',  5,  0, 3, 2,  1),
+    ('7-2',  5,  1, 3, 2,  2),
+    ('7-3',  5,  2, 3, 2,  3),
+    ('7-4',  5,  3, 3, 2,  4),
+    ('7-5',  5,  4, 3, 2,  5),
+    ('7-6',  5,  5, 3, 2,  6),
+    ('7-7',  5,  6, 3, 2,  7),
+    ('7-8',  5,  7, 3, 2,  8),
+    ('7-9',  5,  8, 3, 2,  9),
+    ('7-10', 5,  9, 3, 2, 10),
 
-    # 特高棟（第3週）
-    {"code": "8-1",  "building": _b("特高棟"), "location": "換気機械室",        "description": "", "day_of_week": 3, "week_filter": 3, "sort_order": 1},
-    {"code": "8-2",  "building": _b("特高棟"), "location": "屋上補機",          "description": "", "day_of_week": 3, "week_filter": 3, "sort_order": 2},
-    {"code": "8-3",  "building": _b("特高棟"), "location": "制御室",            "description": "", "day_of_week": 3, "week_filter": 3, "sort_order": 3},
-    {"code": "8-4",  "building": _b("特高棟"), "location": "変圧器室",           "description": "", "day_of_week": 3, "week_filter": 3, "sort_order": 4},
-    {"code": "8-5",  "building": _b("特高棟"), "location": "高圧盤室",           "description": "", "day_of_week": 3, "week_filter": 3, "sort_order": 5},
-    {"code": "8-6",  "building": _b("特高棟"), "location": "ハロンボンベ室",     "description": "", "day_of_week": 3, "week_filter": 3, "sort_order": 6},
-    {"code": "8-7",  "building": _b("特高棟"), "location": "空調機械室",         "description": "", "day_of_week": 3, "week_filter": 3, "sort_order": 7},
-    {"code": "8-8",  "building": _b("特高棟"), "location": "ケーブルピット室",    "description": "", "day_of_week": 3, "week_filter": 3, "sort_order": 8},
-    {"code": "8-9",  "building": _b("特高棟"), "location": "その他",             "description": "", "day_of_week": 3, "week_filter": 3, "sort_order": 9},
+    # building[7] 第3週 (8-1 〜 8-9)
+    ('8-1', 7, 0, 3, 3, 1),
+    ('8-2', 7, 1, 3, 3, 2),
+    ('8-3', 7, 2, 3, 3, 3),
+    ('8-4', 7, 3, 3, 3, 4),
+    ('8-5', 7, 4, 3, 3, 5),
+    ('8-6', 7, 5, 3, 3, 6),
+    ('8-7', 7, 6, 3, 3, 7),
+    ('8-8', 7, 7, 3, 3, 8),
+    ('8-9', 7, 8, 3, 3, 9),
 
-    # 滞水池（第3週）
-    {"code": "9-1",  "building": _b("滞水池"), "location": "ゲート設備",         "description": "", "day_of_week": 3, "week_filter": 3, "sort_order": 1},
-    {"code": "9-2",  "building": _b("滞水池"), "location": "換気・脱臭ファン室",  "description": "", "day_of_week": 3, "week_filter": 3, "sort_order": 2},
-    {"code": "9-3",  "building": _b("滞水池"), "location": "返送水ポンプ室",      "description": "", "day_of_week": 3, "week_filter": 3, "sort_order": 3},
+    # building[8] 第3週 (9-1 〜 9-3)
+    ('9-1', 8, 0, 3, 3, 1),
+    ('9-2', 8, 1, 3, 3, 2),
+    ('9-3', 8, 2, 3, 3, 3),
 
-    # 第二ポンプ施設（第3週）
-    {"code": "7-11",  "building": _b("第二ポンプ施設"), "location": "管理運転",    "description": "", "day_of_week": 3, "week_filter": 3, "sort_order": 1},
+    # building[5] 第3週 (7-11)
+    ('7-11', 5, 10, 3, 3, 1),
 
-    # 中央管理棟（第4週）
-    {"code": "10-1",  "building": _b("中央管理棟"), "location": "空調機械室",         "description": "", "day_of_week": 3, "week_filter": 4, "sort_order": 1},
-    {"code": "10-2",  "building": _b("中央管理棟"), "location": "スクラバー室",       "description": "", "day_of_week": 3, "week_filter": 4, "sort_order": 2},
-    {"code": "10-3",  "building": _b("中央管理棟"), "location": "屋上補機",           "description": "", "day_of_week": 3, "week_filter": 4, "sort_order": 3},
-    {"code": "10-4",  "building": _b("中央管理棟"), "location": "中央操作室",         "description": "", "day_of_week": 3, "week_filter": 4, "sort_order": 4},
-    {"code": "10-5",  "building": _b("中央管理棟"), "location": "空調機械室",        "description": "", "day_of_week": 3, "week_filter": 4, "sort_order": 5},
-    {"code": "10-6",  "building": _b("中央管理棟"), "location": "電気室",            "description": "", "day_of_week": 3, "week_filter": 4, "sort_order": 6},
-    {"code": "10-7",  "building": _b("中央管理棟"), "location": "ボイラー室",         "description": "", "day_of_week": 3, "week_filter": 4, "sort_order": 7},
-    {"code": "10-8",  "building": _b("中央管理棟"), "location": "旧受水槽室",         "description": "", "day_of_week": 3, "week_filter": 4, "sort_order": 8},
-    {"code": "10-9",  "building": _b("中央管理棟"), "location": "空調機械室",         "description": "", "day_of_week": 3, "week_filter": 4, "sort_order": 9},
-    {"code": "10-10",  "building": _b("中央管理棟"), "location": "工作室",            "description": "", "day_of_week": 3, "week_filter": 4, "sort_order": 10},
-    {"code": "10-11",  "building": _b("中央管理棟"), "location": "水質薬品室",        "description": "", "day_of_week" :3, "week_filter" :4, "sort_order" :11},
+    # building[9] 第4週 (10-1 〜 10-11)
+    ('10-1',  9, 0, 3, 4,  1),
+    ('10-2',  9, 1, 3, 4,  2),
+    ('10-3',  9, 2, 3, 4,  3),
+    ('10-4',  9, 3, 3, 4,  4),
+    ('10-5',  9, 0, 3, 4,  5),
+    ('10-6',  9, 4, 3, 4,  6),
+    ('10-7',  9, 5, 3, 4,  7),
+    ('10-8',  9, 6, 3, 4,  8),
+    ('10-9',  9, 0, 3, 4,  9),
+    ('10-10', 9, 7, 3, 4, 10),
+    ('10-11', 9, 8, 3, 4, 11),
 
-    # ホッパー棟（第4週）
-    {"code": "11-1",  "building": _b("ホッパー棟"), "location": "沈砂設備（沈砂池棟）", "description": "", "day_of_week": 3, "week_filter": 4, "sort_order": 1},
-    {"code": "11-2",  "building": _b("ホッパー棟"), "location": "ホッパー室",          "description": "", "day_of_week": 3, "week_filter": 4, "sort_order": 2},
-    {"code": "11-3",  "building": _b("ホッパー棟"), "location": "換気機械室",          "description": "", "day_of_week": 3, "week_filter": 4, "sort_order": 3},
-    {"code": "11-4",  "building": _b("ホッパー棟"), "location": "倉庫（換気ファン）",   "description": "", "day_of_week": 3, "week_filter": 4, "sort_order": 4},
-    {"code": "11-5",  "building": _b("ホッパー棟"), "location": "屋上補機",            "description": "", "day_of_week": 3, "week_filter": 4, "sort_order": 5},
+    # building[10] 第4週 (11-1 〜 11-5)
+    ('11-1', 10, 0, 3, 4, 1),
+    ('11-2', 10, 1, 3, 4, 2),
+    ('11-3', 10, 2, 3, 4, 3),
+    ('11-4', 10, 3, 3, 4, 4),
+    ('11-5', 10, 4, 3, 4, 5),
 
     # ─────────────────────────────────────────
     # 木曜日 (day_of_week=4)
     # ─────────────────────────────────────────
 
-    # 二次処理棟
-    {"code": "12-1",  "building": _b("二次処理棟"), "location": "屋上補機",         "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 1},
-    {"code": "12-2",  "building": _b("二次処理棟"), "location": "太陽光パネル",     "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 2},
-    {"code": "12-3",  "building": _b("二次処理棟"), "location": "電気室",           "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 3},
-    {"code": "12-4",  "building": _b("二次処理棟"), "location": "換気ファン室",     "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 4},
-    {"code": "12-5",  "building": _b("二次処理棟"), "location": "制御室",           "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 5},
-    {"code": "12-6",  "building": _b("二次処理棟"), "location": "電気室",           "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 6},
-    {"code": "12-7",  "building": _b("二次処理棟"), "location": "送風機室",         "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 7},
-    {"code": "12-8",  "building": _b("二次処理棟"), "location": "コンプレッサー室",  "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 8},
-    {"code": "12-9",  "building": _b("二次処理棟"), "location": "空調機械室",        "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 9},
-    {"code": "12-10", "building": _b("二次処理棟"), "location": "ブロワ配管",        "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 10},
-    {"code": "12-11", "building": _b("二次処理棟"), "location": "冷却水ポンプ",      "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 11},
-    {"code": "12-12", "building": _b("二次処理棟"), "location": "給水ユニット",      "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 12},
-    {"code": "12-13", "building": _b("二次処理棟"), "location": "フィルター室",      "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 13},
-    {"code": "12-14", "building": _b("二次処理棟"), "location": "その他",           "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 14},
+    # building[11] (12-1 〜 12-14)
+    ('12-1',  11,  0, 4, None,  1),
+    ('12-2',  11,  1, 4, None,  2),
+    ('12-3',  11,  2, 4, None,  3),
+    ('12-4',  11,  3, 4, None,  4),
+    ('12-5',  11,  4, 4, None,  5),
+    ('12-6',  11,  2, 4, None,  6),
+    ('12-7',  11,  5, 4, None,  7),
+    ('12-8',  11,  6, 4, None,  8),
+    ('12-9',  11,  7, 4, None,  9),
+    ('12-10', 11,  8, 4, None, 10),
+    ('12-11', 11,  9, 4, None, 11),
+    ('12-12', 11, 10, 4, None, 12),
+    ('12-13', 11, 11, 4, None, 13),
+    ('12-14', 11, 12, 4, None, 14),
 
-    # 第5系列水処理施設
-    {"code": "13-1",  "building": _b("第5系列水処理施設"), "location": "電気室",            "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 1},
-    {"code": "13-2",  "building": _b("第5系列水処理施設"), "location": "制御室",            "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 2},
-    {"code": "13-3",  "building": _b("第5系列水処理施設"), "location": "ろ過機配管室",      "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 3},
-    {"code": "13-4",  "building": _b("第5系列水処理施設"), "location": "換気機械室",        "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 4},
-    {"code": "13-5",  "building": _b("第5系列水処理施設"), "location": "凝集剤ポンプ室",    "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 5},
-    {"code": "13-6",  "building": _b("第5系列水処理施設"), "location": "循環ポンプ室",      "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 6},
-    {"code": "13-7",  "building": _b("第5系列水処理施設"), "location": "返送汚泥ポンプ室",  "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 7},
-    {"code": "13-8",  "building": _b("第5系列水処理施設"), "location": "反応タンク",        "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 8},
-    {"code": "13-9",  "building": _b("第5系列水処理施設"), "location": "最終沈殿池",        "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 9},
-    {"code": "13-10",  "building": _b("第5系列水処理施設"), "location": "汚泥かき寄せ機",    "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 10},
-    {"code": "13-11",  "building": _b("第5系列水処理施設"), "location": "砂ろ過分配配水路",  "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 11},
-    {"code": "13-12",  "building": _b("第5系列水処理施設"), "location": "PAC注入管流量確認", "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 12},
-    {"code": "13-13",  "building": _b("第5系列水処理施設"),	"location":"その他",             "description":"","day_of_week" :4,"week_filter" :None,"sort_order" :13},
+    # building[12] (13-1 〜 13-13)
+    ('13-1',  12,  0, 4, None,  1),
+    ('13-2',  12,  1, 4, None,  2),
+    ('13-3',  12,  2, 4, None,  3),
+    ('13-4',  12,  3, 4, None,  4),
+    ('13-5',  12,  4, 4, None,  5),
+    ('13-6',  12,  5, 4, None,  6),
+    ('13-7',  12,  6, 4, None,  7),
+    ('13-8',  12,  7, 4, None,  8),
+    ('13-9',  12,  8, 4, None,  9),
+    ('13-10', 12,  9, 4, None, 10),
+    ('13-11', 12, 10, 4, None, 11),
+    ('13-12', 12, 11, 4, None, 12),
+    ('13-13', 12, 12, 4, None, 13),
 
-    # 1〜4系水処理施設
-    {"code": "14-1",  "building": _b("1～4系水処理施設"), "location": "初沈汚泥引抜弁",     "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 1},
-    {"code": "14-2",  "building": _b("1～4系水処理施設"), "location": "初沈汚泥ポンプ",     "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 2},
-    {"code": "14-3",  "building": _b("1～4系水処理施設"), "location": "返送汚泥ポンプ",     "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 3},
-    {"code": "14-4",  "building": _b("1～4系水処理施設"), "location": "余剰汚泥ポンプ",     "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 4},
-    {"code": "14-5",  "building": _b("1～4系水処理施設"), "location": "循環ポンプ",         "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 5},
-    {"code": "14-6",  "building": _b("1～4系水処理施設"), "location": "管廊（PAC設備含む）", "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 6},
-    {"code": "14-7",  "building": _b("1～4系水処理施設"), "location": "最初沈殿池",          "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 7},
-    {"code": "14-8",  "building": _b("1～4系水処理施設"), "location": "初沈汚泥かき寄せ機",  "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 8},
-    {"code": "14-9",  "building": _b("1～4系水処理施設"), "location": "反応タンク",         "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 9},
-    {"code": "14-10",  "building": _b("1～4系水処理施設"), "location": "最終沈殿池",        "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 10},
-    {"code": "14-11",  "building": _b("1～4系水処理施設"), "location": "終沈汚泥かき寄せ機", "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 11},
-    {"code": "14-12",  "building": _b("1～4系水処理施設"), "location": "集中給油装置",      "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 12},
-    {"code": "14-13",  "building": _b("1～4系水処理施設"),	"location":"脱臭装置",   	    "description":"","day_of_week" :4,"week_filter" :None,"sort_order" :13},
-    {"code": "14-14", 	"building":"1～4系水処理施設","location":"りん酸計",            "description":"","day_of_week" :4,"week_filter" :None,"sort_order" :14},
-    {"code": "14-15",  "building": _b("1～4系水処理施設"), "location": "PAC注入量流量確認",  "description": "", "day_of_week": 4, "week_filter": None, "sort_order": 15},
+    # building[13] (14-1 〜 14-15)
+    ('14-1',  13,  0, 4, None,  1),
+    ('14-2',  13,  1, 4, None,  2),
+    ('14-3',  13,  2, 4, None,  3),
+    ('14-4',  13,  3, 4, None,  4),
+    ('14-5',  13,  4, 4, None,  5),
+    ('14-6',  13,  5, 4, None,  6),
+    ('14-7',  13,  6, 4, None,  7),
+    ('14-8',  13,  7, 4, None,  8),
+    ('14-9',  13,  8, 4, None,  9),
+    ('14-10', 13,  9, 4, None, 10),
+    ('14-11', 13, 10, 4, None, 11),
+    ('14-12', 13, 11, 4, None, 12),
+    ('14-13', 13, 12, 4, None, 13),
+    ('14-14', 13, 13, 4, None, 14),
+    ('14-15', 13, 14, 4, None, 15),
 
     # ─────────────────────────────────────────
     # 金曜日 (day_of_week=5)
     # ─────────────────────────────────────────
 
-    # 7・8系水処理棟
-    {"code": "15-1",  "building": _b("7・8系水処理棟"), "location": "制御室",           "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 1},
-    {"code": "15-2",  "building": _b("7・8系水処理棟"), "location": "低圧電気室",        "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 2},
-    {"code": "15-3",  "building": _b("7・8系水処理棟"), "location": "高圧電気室",        "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 3},
-    {"code": "15-4",  "building": _b("7・8系水処理棟"), "location": "脱臭機室",          "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 4},
-    {"code": "15-5",  "building": _b("7・8系水処理棟"), "location": "最初沈殿池",        "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 5},
-    {"code": "15-6",  "building": _b("7・8系水処理棟"), "location": "反応タンク",        "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 6},
-    {"code": "15-7",  "building": _b("7・8系水処理棟"), "location": "最終沈殿池",          "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 7},
-    {"code": "15-8",  "building": _b("7・8系水処理棟"), "location": "7系りん酸濃度計",      "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 8},
-    {"code": "15-9",  "building": _b("7・8系水処理棟"), "location": "初沈スカム移送ポンプ",  "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 9},
-    {"code": "15-10",  "building": _b("7・8系水処理棟"), "location": "初沈汚泥ポンプ",       "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 10},
-    {"code": "15-11",  "building": _b("7・8系水処理棟"), "location": "初沈池排水ポンプ",     "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 11},
-    {"code": "15-12",  "building": _b("7・8系水処理棟"), "location": "反応タンク空気圧縮機", "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 12},
-    {"code": "15-13",  "building": _b("7・8系水処理棟"), "location": "PAC設備",            "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 13},
-    {"code": "15-14",  "building": _b("7・8系水処理棟"), "location": "循環ポンプ",         "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 14},
-    {"code": "15-15",  "building": _b("7・8系水処理棟"), "location": "終沈空気圧縮機",      "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 15},
-    {"code": "15-16",  "building": _b("7・8系水処理棟"), "location": "終沈スカム移送ポンプ", "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 16},
-    {"code": "15-17",  "building": _b("7・8系水処理棟"), "location": "消泡水ポンプ",       "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 17},
-    {"code": "15-18",  "building": _b("7・8系水処理棟"), "location": "汚泥調整弁",         "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 18},
-    {"code": "15-19",  "building": _b("7・8系水処理棟"), "location": "床排水ポンプ",       "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 19},
-    {"code": "15-20",  "building": _b("7・8系水処理棟"), "location": "初沈床排水ポンプ",   "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 20},
-    {"code": "15-21",  "building": _b("7・8系水処理棟"), "location": "返水ポンプ",         "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 21},
-    {"code": "15-22",  "building":"7・8系水処理棟","location":"返送汚泥ポンプ",        "description":"","day_of_week" :5,"week_filter" :None,"sort_order" :22},
-    {"code": "15-23",  "building":"7・8系水処理棟","location":"余剰汚泥ポンプ",        "description":"","day_of_week" :5,"week_filter" :None,"sort_order" :23},
-    {"code": "15-24",  "building":"7・8系水処理棟","location":"反応タンク・終沈池排水ポンプ","description":"","day_of_week" :5,"week_filter" :None,"sort_order" :24},
-    {"code": "15-25",  "building":"7・8系水処理棟","location":"送風機連絡管廊床排水ポンプ","description":"","day_of_week" :5,"week_filter" :None,"sort_order" :25},
-    {"code": "15-26",  "building": _b("7・8系水処理棟"), "location":"終沈床排水ポンプ",    "description":"","day_of_week" :5,"week_filter" :None,"sort_order" :26},
-    {"code": "15-27",  "building": _b("7・8系水処理棟"), "location":"その他",            "description":"","day_of_week" :5,"week_filter" :None,"sort_order" :27},
+    # building[14] (15-1 〜 15-27)
+    ('15-1',  14,  0, 5, None,  1),
+    ('15-2',  14,  1, 5, None,  2),
+    ('15-3',  14,  2, 5, None,  3),
+    ('15-4',  14,  3, 5, None,  4),
+    ('15-5',  14,  4, 5, None,  5),
+    ('15-6',  14,  5, 5, None,  6),
+    ('15-7',  14,  6, 5, None,  7),
+    ('15-8',  14,  7, 5, None,  8),
+    ('15-9',  14,  8, 5, None,  9),
+    ('15-10', 14,  9, 5, None, 10),
+    ('15-11', 14, 10, 5, None, 11),
+    ('15-12', 14, 11, 5, None, 12),
+    ('15-13', 14, 12, 5, None, 13),
+    ('15-14', 14, 13, 5, None, 14),
+    ('15-15', 14, 14, 5, None, 15),
+    ('15-16', 14, 15, 5, None, 16),
+    ('15-17', 14, 16, 5, None, 17),
+    ('15-18', 14, 17, 5, None, 18),
+    ('15-19', 14, 18, 5, None, 19),
+    ('15-20', 14, 19, 5, None, 20),
+    ('15-21', 14, 20, 5, None, 21),
+    ('15-22', 14, 21, 5, None, 22),
+    ('15-23', 14, 22, 5, None, 23),
+    ('15-24', 14, 23, 5, None, 24),
+    ('15-25', 14, 24, 5, None, 25),
+    ('15-26', 14, 25, 5, None, 26),
+    ('15-27', 14, 26, 5, None, 27),
 
-    # 7・8系送風機棟
-    {"code": "16-1",  "building": _b("7・8系送風機棟"), "location": "冷却塔",          "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 1},
-    {"code": "16-2",  "building": _b("7・8系送風機棟"), "location": "ブロワ",          "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 2},
-    {"code": "16-3",  "building": _b("7・8系送風機棟"), "location": "電気室",          "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 3},
-    {"code": "16-4",  "building": _b("7・8系送風機棟"), "location": "制御室",          "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 4},
-    {"code": "16-5",  "building": _b("7・8系送風機棟"), "location": "換気機械室（1）", "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 5},
-    {"code": "16-6",  "building": _b("7・8系送風機棟"), "location": "換気機械室（2）",  "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 6},
-    {"code": "16-7",  "building": _b("7・8系送風機棟"), "location": "消火栓ポンプ室",   "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 7},
-    {"code": "16-8",  "building": _b("7・8系送風機棟"), "location": "冷却水ポンプ",     "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 8},
-    {"code": "16-9",  "building": _b("7・8系送風機棟"), "location": "床排水ポンプ",     "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 9},
-    {"code": "16-10", "building": _b("7・8系送風機棟"), "location": "エアフィルター",   "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 10},
+    # building[15] (16-1 〜 16-10)
+    ('16-1',  15, 0, 5, None,  1),
+    ('16-2',  15, 1, 5, None,  2),
+    ('16-3',  15, 2, 5, None,  3),
+    ('16-4',  15, 3, 5, None,  4),
+    ('16-5',  15, 4, 5, None,  5),
+    ('16-6',  15, 5, 5, None,  6),
+    ('16-7',  15, 6, 5, None,  7),
+    ('16-8',  15, 7, 5, None,  8),
+    ('16-9',  15, 8, 5, None,  9),
+    ('16-10', 15, 9, 5, None, 10),
 
-    # 7・8系管廊・流量計室
-    {"code": "17-1",  "building": _b("7・8系管廊・流量計室"), "location": "流量計室",  "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 1},
-    {"code": "17-2",  "building": _b("7・8系管廊・流量計室"), "location": "7系管廊床排水ポンプ", "description": "", "day_of_week": 5, "week_filter": None, "sort_order": 2},
+    # building[16] (17-1 〜 17-2)
+    ('17-1', 16, 0, 5, None, 1),
+    ('17-2', 16, 1, 5, None, 2),
 ]
+# fmt: on
+
+INSPECTION_ITEMS = [_item(*row) for row in _SEED]
