@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="theme-color" content="#2c5f8a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>
+    {% set day_names = {1:"月曜日",2:"火曜日",3:"水曜日",4:"木曜日",5:"金曜日"} %}
+    {{ day_names[day] }} 点検 — 日常点検アプリ
+  </title>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <link rel="icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+  <div id="offline-banner">⚠ オフラインモード — 結果はローカルに保存されます</div>
+
+  <header>
+    <a class="back-btn" href="/">← 戻る</a>
+    <h1>
+      {% set day_names = {1:"月曜日",2:"火曜日",3:"水曜日",4:"木曜日",5:"金曜日"} %}
+      {{ day_names[day] }} 点検
+    </h1>
+    <button id="voice-btn" class="voice-btn" title="音声入力（タップで開始/停止）" aria-label="音声入力">🎤</button>
+    <div class="header-meta">
+      <span class="header-date-row">
+        <span id="current-date" class="header-date"></span>
+        <span id="week-badge" class="header-week"></span>
+      </span>
+      <span id="progress-label" class="header-progress-label">読み込み中…</span>
+      <button id="edit-mode-btn" class="edit-mode-btn" style="display:none">✏ 編集モード</button>
+    </div>
+    <div class="header-progress-bar">
+      <div class="header-progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+  </header>
+
+  <main>
+    <!-- 週選択ボタン（水曜日のみ表示） -->
+    {% if day == 3 %}
+    <div class="week-selector" id="week-selector">
+      <span class="week-selector-label">週を選択:</span>
+      <button class="week-sel-btn" data-week="1">第1週</button>
+      <button class="week-sel-btn" data-week="2">第2週</button>
+      <button class="week-sel-btn" data-week="3">第3週</button>
+      <button class="week-sel-btn" data-week="4">第4週</button>
+    </div>
+    {% endif %}
+
+    <!-- 閲覧モードバナー（過去日表示時のみ） -->
+    <div id="past-date-banner" class="past-date-banner" style="display:none">
+      📅 過去の点検結果を表示中です。誤操作を防ぐため <strong>閲覧モード</strong> になっています。
+      右上の「✏ 編集モード」ボタンで編集できます。
+    </div>
+
+    <!-- 点検項目コンテナ（JS で描画） -->
+    <div id="inspect-container">
+      <div class="loading">
+        <div class="spinner"></div>
+        点検項目を読み込み中…
+      </div>
+    </div>
+
+    <!-- 操作ボタン -->
+    <div class="action-bar">
+      <a class="export-btn" id="export-btn" href="#" target="_blank">
+        ⬇ Excel書き出し
+      </a>
+      <button class="nondefect-btn" id="nondefect-btn">✅ 異常なし</button>
+      <button class="reset-btn" id="reset-btn">結果をリセット</button>
+    </div>
+  </main>
+
+  <!-- 音声認識トースト -->
+  <div class="voice-toast" id="voice-toast" aria-live="polite">
+    <span class="voice-toast-icon">🎤</span>
+    <span class="voice-toast-text"></span>
+  </div>
+
+  <!-- 同期ステータス -->
+  <div class="sync-status" id="sync-status">
+    <span class="sync-dot"></span>
+    <span class="sync-label"></span>
+  </div>
+
+  <!-- コンテキストリンク（他アプリへの参照） -->
+  <div id="plant-context-area" style="margin:0.5rem 1rem 0.5rem;display:none">
+    {% set context_links = [
+      {"label": "点検設備を機器台帳で確認", "app": "equipment"},
+      {"label": "点検写真を写真管理に記録", "app": "photo"}
+    ] %}
+    {% include 'context_link.html' %}
+  </div>
+  <script>
+    /* 点検ページのコンテキストリンクを表示 */
+    document.addEventListener('DOMContentLoaded', function () {
+      var area = document.getElementById('plant-context-area');
+      if (area) area.style.display = 'block';
+    });
+  </script>
+
+  {% set active_app = 'inspection' %}
+  {% include 'bottom_nav.html' %}
+
+  <script type="module">
+    import { initInspectPage, switchWeek } from "{{ url_for('static', filename='js/app.js') }}";
+    import { clearResultsForDate } from "{{ url_for('static', filename='js/db.js') }}";
+    import { initVoiceInput, focusFirst } from "{{ url_for('static', filename='js/voice.js') }}";
+
+    const DAY = {{ day }};
+
+    // 表示対象日付（URL パラメータ ?date=YYYY-MM-DD、なければ今日）
+    const _ld = new Date();
+    const TODAY_LOCAL = `${_ld.getFullYear()}-${String(_ld.getMonth()+1).padStart(2,"0")}-${String(_ld.getDate()).padStart(2,"0")}`;
+    const urlDate     = new URLSearchParams(window.location.search).get("date");
+    const inspectDate = urlDate || TODAY_LOCAL;
+    const isHistorical = inspectDate < TODAY_LOCAL;
+
+    // Service Worker 登録
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("{{ url_for('static', filename='sw.js') }}")
+        .catch(e => console.warn("SW登録失敗:", e));
+    }
+
+    // 過去日の場合: 先に readonly クラスを付与（loadInspectItems 後も持続）
+    if (isHistorical) {
+      document.getElementById("inspect-container").classList.add("readonly");
+      document.getElementById("past-date-banner").style.display = "block";
+      document.getElementById("edit-mode-btn").style.display    = "inline-block";
+      document.getElementById("nondefect-btn").style.display    = "none";
+      document.getElementById("reset-btn").style.display        = "none";
+    }
+
+    initInspectPage(DAY, inspectDate);
+
+    // 編集モードトグル
+    let editMode = false;
+    document.getElementById("edit-mode-btn").addEventListener("click", () => {
+      editMode = !editMode;
+      const btn       = document.getElementById("edit-mode-btn");
+      const container = document.getElementById("inspect-container");
+      const banner    = document.getElementById("past-date-banner");
+      if (editMode) {
+        container.classList.remove("readonly");
+        btn.textContent = "🔒 閲覧モードに戻る";
+        btn.classList.add("active");
+        document.getElementById("nondefect-btn").style.display = "";
+        document.getElementById("reset-btn").style.display     = "";
+        banner.innerHTML = "✏️ <strong>編集モード</strong> — 過去の点検結果を編集できます。";
+      } else {
+        container.classList.add("readonly");
+        btn.textContent = "✏ 編集モード";
+        btn.classList.remove("active");
+        document.getElementById("nondefect-btn").style.display = "none";
+        document.getElementById("reset-btn").style.display     = "none";
+        banner.innerHTML = "📅 過去の点検結果を表示中です。誤操作を防ぐため <strong>閲覧モード</strong> になっています。右上の「✏ 編集モード」ボタンで編集できます。";
+      }
+    });
+
+    // Excel書き出しボタン（表示対象日付でURLをセット）
+    const exportBtn = document.getElementById("export-btn");
+    exportBtn.href = `/api/export?date=${inspectDate}`;
+
+    // 週選択ボタン（水曜日のみ）
+    document.querySelectorAll(".week-sel-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        switchWeek(parseInt(btn.dataset.week));
+      });
+    });
+
+    // 異常なしボタン
+    document.getElementById("nondefect-btn").addEventListener("click", () => {
+      if (!confirm("全項目を基準となる判定内容で一括入力します。よろしいですか？")) return;
+      document.querySelectorAll(".item-row").forEach(row => {
+        const hint = row.dataset.resultHint || "";
+        const target = (hint === "×") ? "×" : (hint === "△" || hint === "▲") ? "△" : "〇";
+        const btn = row.querySelector(`.result-btn[data-result="${target}"]`);
+        if (btn && !btn.classList.contains("active")) btn.click();
+      });
+    });
+
+    // ─── 音声入力 ─────────────────────────────
+    const voiceBtn   = document.getElementById("voice-btn");
+    const voiceToast = document.getElementById("voice-toast");
+    let _toastTimer  = null;
+
+    function showVoiceToast(icon, text) {
+      clearTimeout(_toastTimer);
+      voiceToast.querySelector(".voice-toast-icon").textContent = icon;
+      voiceToast.querySelector(".voice-toast-text").textContent = text;
+      voiceToast.classList.add("show");
+      _toastTimer = setTimeout(() => voiceToast.classList.remove("show"), 3000);
+    }
+
+    const voice = initVoiceInput({
+      onStateChange(state) {
+        if (state === "listening") {
+          voiceBtn.classList.add("listening");
+          voiceBtn.title = "認識中… タップで停止";
+          showVoiceToast("🎙️", "聞いています…");
+        } else {
+          voiceBtn.classList.remove("listening");
+          voiceBtn.title = "音声入力（タップで開始/停止）";
+        }
+      },
+      onTranscript({ transcript, matched }) {
+        showVoiceToast(matched ? "✅" : "❓", transcript);
+      },
+    });
+
+    if (voice) {
+      voiceBtn.addEventListener("click", () => voice.toggle());
+      // 点検データ描画後に最初の未入力項目へフォーカス（今日の点検時のみ）
+      if (!isHistorical) setTimeout(() => voice.focusFirst(), 800);
+    } else {
+      voiceBtn.disabled = true;
+      voiceBtn.title = "この端末は音声入力に対応していません";
+    }
+
+    // リセットボタン
+    document.getElementById("reset-btn").addEventListener("click", async () => {
+      if (!confirm(`${inspectDate} の点検結果をすべてリセットします。よろしいですか？`)) return;
+
+      const dateStr = inspectDate;
+      try {
+        // ローカルの全ボタンをリセット
+        document.querySelectorAll(".result-btn").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".memo-textarea").forEach(t => t.value = "");
+        document.querySelectorAll(".memo-btn").forEach(b => {
+          b.classList.remove("has-memo");
+          b.textContent = "✏️ メモ";
+        });
+        document.getElementById("progress-fill").style.width = "0%";
+        document.getElementById("progress-label").textContent = "0 件完了 (0%)";
+
+        // IndexedDB（ローカル）のリセット
+        await clearResultsForDate(dateStr).catch(() => {});
+
+        // サーバーにリセットを送信（全項目をresult=""で上書き）
+        const items = [...document.querySelectorAll(".result-btn")];
+        const uniqueIds = [...new Set(items.map(b => b.dataset.item))];
+        if (uniqueIds.length) {
+          await fetch("/api/results/batch", {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(uniqueIds.map(id => ({
+              item_id: parseInt(id),
+              inspection_date: dateStr,
+              result: "",
+              memo: ""
+            })))
+          }).catch(() => {});
+        }
+      } catch(e) {
+        console.warn("リセット中にエラー:", e);
+      }
+    });
+  </script>
+</body>
+</html>

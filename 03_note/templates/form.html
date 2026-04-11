@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% if action == 'new' %}新規登録{% else %}編集{% endif %} - 引継ぎノート</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Meiryo', 'メイリオ', sans-serif; font-size: 14px; background: #f5f5f5; color: #333; }
+  header { background: #2c5282; color: #fff; padding: 12px 20px; }
+  header h1 { font-size: 20px; }
+  .container { max-width: 720px; margin: 30px auto; padding: 0 16px; }
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 28px 32px; }
+  h2 { font-size: 18px; margin-bottom: 20px; color: #2c5282; border-bottom: 2px solid #ebf8ff; padding-bottom: 8px; }
+  .form-group { margin-bottom: 18px; }
+  label { display: block; font-size: 13px; color: #555; margin-bottom: 5px; font-weight: 600; }
+  input[type=text], input[type=date], select, textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid #cbd5e0; border-radius: 5px;
+    font-size: 14px; font-family: inherit; color: #333;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: #3182ce; box-shadow: 0 0 0 2px rgba(49,130,206,0.2); }
+  textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
+  .btn-row { display: flex; gap: 10px; margin-top: 24px; }
+  .btn { display: inline-block; padding: 9px 20px; border-radius: 5px; border: none; cursor: pointer; font-size: 14px; text-decoration: none; font-family: inherit; }
+  .btn-primary { background: #3182ce; color: #fff; }
+  .btn-primary:hover { background: #2b6cb0; }
+  .btn-secondary { background: #e2e8f0; color: #333; }
+  .btn-secondary:hover { background: #cbd5e0; }
+  .flash { padding: 10px 16px; margin-bottom: 16px; border-radius: 4px; font-size: 13px; }
+  .flash.error { background: #fed7d7; color: #9b2335; border: 1px solid #fc8181; }
+  .required { color: #e53e3e; }
+  .hint { font-size: 11px; color: #999; margin-top: 3px; }
+  .delete-section { margin-top: 32px; border-top: 1px solid #fed7d7; padding-top: 20px; }
+  .delete-section label { color: #c53030; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+  .btn-danger { background: #fc8181; color: #fff; opacity: 0.4; pointer-events: none; }
+  .btn-danger.active { opacity: 1; pointer-events: auto; }
+  .btn-danger.active:hover { background: #e53e3e; }
+</style>
+</head>
+<body>
+<header>
+  <h1>引継ぎノート</h1>
+</header>
+<div class="container">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, msg in messages %}
+      <div class="flash {{ category }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="card">
+    <h2>{% if action == 'new' %}新規登録{% else %}記録を編集{% endif %}</h2>
+    <form method="post">
+      <div class="form-group">
+        <label>記入年月日 <span class="required">*</span></label>
+        <input type="date" name="date" value="{{ rec_date }}" required>
+      </div>
+      <div class="form-group">
+        <label>勤務</label>
+        <select name="kinmu">
+          <option value="">-- 選択 --</option>
+          {% for opt in kinmu_options %}
+            <option value="{{ opt }}" {% if rec_kinmu == opt %}selected{% endif %}>{{ opt }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>種別</label>
+        <select name="shubetsu">
+          <option value="">-- 選択 --</option>
+          {% for opt in shubetsu_options %}
+            <option value="{{ opt }}" {% if rec_shubetsu == opt %}selected{% endif %}>{{ opt }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>時刻</label>
+        <input type="text" name="jikoku" value="{{ rec_jikoku }}" placeholder="例: 午前、14:30、日勤">
+        <div class="hint">午前 / 午後 / 時刻（HH:MM）/ 勤務帯名 など自由入力</div>
+      </div>
+      <div class="form-group">
+        <label>内容</label>
+        <textarea name="naiyou">{{ rec_naiyou }}</textarea>
+      </div>
+      <div class="form-group">
+        <label>記入者</label>
+        <input type="text" name="kinyugsha" value="{{ rec_kinyugsha }}">
+      </div>
+      <div class="btn-row">
+        <button type="submit" class="btn btn-primary">{% if action == 'new' %}登録{% else %}更新{% endif %}</button>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">キャンセル</a>
+      </div>
+    </form>
+
+    {% if action == 'edit' %}
+    <div class="delete-section">
+      <label>
+        <input type="checkbox" id="delete_confirm_check" onchange="document.getElementById('delete_btn').classList.toggle('active', this.checked);">
+        このレコードを削除する
+      </label>
+      <form method="post" action="{{ url_for('delete', rid=rid) }}" style="margin-top: 12px;"
+            onsubmit="return document.getElementById('delete_confirm_check').checked && confirm('本当に削除しますか？この操作は取り消せません。');">
+        <button type="submit" id="delete_btn" class="btn btn-danger">削除</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- コンテキストリンク：機器台帳参照 -->
+<div style="max-width:720px;margin:0.5rem auto;padding:0 16px">
+  {% set context_links = [
+    {"label": "機器台帳で設備を検索・確認", "app": "equipment"},
+    {"label": "点検アプリに移動", "app": "inspection"},
+    {"label": "写真管理に移動", "app": "photo"}
+  ] %}
+  {% include 'context_link.html' %}
+</div>
+
+{% set active_app = 'handover' %}
+{% include 'bottom_nav.html' %}
+</body>
+</html>

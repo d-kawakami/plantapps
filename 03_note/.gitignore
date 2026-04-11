@@ -1,0 +1,10 @@
+*.db
+__pycache__/
+
+.env
+
+.claude
+
+*.xlsx
+*.db
+media/

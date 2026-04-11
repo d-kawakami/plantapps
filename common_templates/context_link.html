@@ -1,0 +1,81 @@
+<!-- ============================================================
+  Plant Apps コンテキストリンク
+  前提: context_links 変数にリンクリストを設定してから include する
+  例: context_links = [
+    {"label": "機器台帳で詳細確認", "app": "equipment", "query": "ポンプA"},
+    {"label": "写真管理に記録", "app": "photo"},
+  ]
+  ============================================================ -->
+{% if context_links %}
+<div class="plant-context-links">
+  <style>
+    .plant-context-links {
+      margin: 0.75rem 0;
+    }
+    .plant-context-link-card {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 0.9rem;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      margin-bottom: 0.4rem;
+      text-decoration: none;
+      color: #1d4ed8;
+      font-size: 0.85rem;
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', sans-serif;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+    .plant-context-link-card:hover {
+      background: #dbeafe;
+    }
+    .plant-context-link-card svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+    .plant-context-link-arrow {
+      margin-left: auto;
+      opacity: 0.6;
+    }
+  </style>
+  {% for link in context_links %}
+  <a href="#"
+     class="plant-context-link-card"
+     data-app="{{ link.app }}"
+     data-query="{{ link.query | default('') }}"
+     data-path="{{ link.path | default('') }}"
+     onclick="plantContextNav(this); return false;">
+    <!-- 外部リンクアイコン -->
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+      <polyline points="15 3 21 3 21 9"/>
+      <line x1="10" y1="14" x2="21" y2="3"/>
+    </svg>
+    {{ link.label }}
+    <span class="plant-context-link-arrow">→</span>
+  </a>
+  {% endfor %}
+</div>
+
+<script>
+function plantContextNav(el) {
+  var h = window.location.hostname;
+  var proto = window.location.protocol;
+  var PORTS = { handover: 5003, equipment: 5002, inspection: 5001, photo: 5004 };
+  var app   = el.dataset.app;
+  var query = el.dataset.query || '';
+  var path  = el.dataset.path || '';
+  var base  = proto + '//' + h + ':' + (PORTS[app] || 80);
+  var url   = base + (path || '/');
+  if (query) {
+    url = base + '/equipment?q=' + encodeURIComponent(query);
+    if (app === 'photo') url = base + '/list?q=' + encodeURIComponent(query);
+  }
+  window.location.href = url;
+}
+</script>
+{% endif %}

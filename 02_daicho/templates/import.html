@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}CSVインポート - 機器台帳管理システム{% endblock %}
+
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-upload me-2"></i>CSVインポート</h4>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-7">
+    <div class="card">
+      <div class="card-header">ファイル選択</div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label">CSVファイル (.csv)</label>
+          <input type="file" class="form-control" id="csv-file" accept=".csv">
+          <div class="form-text">文字コードは自動検出されます (UTF-8, Shift-JIS 等)</div>
+        </div>
+
+        <!-- エンコーディング表示 -->
+        <div id="encoding-info" class="alert alert-info py-2 d-none">
+          <i class="bi bi-info-circle me-1"></i>
+          <span id="encoding-text"></span>
+        </div>
+
+        <!-- プレビュー -->
+        <div id="preview-section" class="d-none">
+          <h6>プレビュー (最初の5行)</h6>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered" id="preview-table">
+              <thead id="preview-thead" class="table-light"></thead>
+              <tbody id="preview-tbody"></tbody>
+            </table>
+          </div>
+          <div class="text-muted small" id="preview-info"></div>
+        </div>
+
+        <div class="d-flex gap-2 mt-3">
+          <button class="btn btn-primary" id="import-btn" disabled>
+            <i class="bi bi-upload me-1"></i>インポート実行
+          </button>
+          <button class="btn btn-outline-secondary" id="clear-btn">
+            <i class="bi bi-x-circle me-1"></i>クリア
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 結果表示 -->
+  <div class="col-12 col-lg-5">
+    <div class="card" id="result-card" style="display:none;">
+      <div class="card-header"><i class="bi bi-check2-circle me-1"></i>インポート結果</div>
+      <div class="card-body">
+        <div class="row text-center mb-3">
+          <div class="col-6">
+            <div class="fs-3 fw-bold text-success" id="res-success">0</div>
+            <div class="small text-muted">成功件数</div>
+          </div>
+          <div class="col-6">
+            <div class="fs-3 fw-bold text-danger" id="res-error">0</div>
+            <div class="small text-muted">エラー件数</div>
+          </div>
+        </div>
+        <div id="res-encoding" class="text-muted small mb-2"></div>
+        <div id="error-list-section" class="d-none">
+          <h6 class="text-danger">エラー詳細</h6>
+          <div class="overflow-auto" style="max-height:300px;">
+            <ul class="list-group list-group-flush" id="error-list"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header">インポート仕様</div>
+      <div class="card-body small text-muted">
+        <ul class="mb-0">
+          <li>1行目はヘッダー行として扱われます</li>
+          <li>レコードIDが一致する場合は更新、一致しない場合は新規登録されます</li>
+          <li>機器名称が空の行はスキップされます</li>
+          <li>日付フォーマット: YYYY/MM/DD または YYYY-MM-DD</li>
+          <li>文字コードは自動検出 (UTF-8, Shift-JIS, EUC-JP 等)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectedFile = null;
+let parsedHeaders = [];
+let parsedRows = [];
+
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ファイル選択時: プレビュー表示
+document.getElementById('csv-file').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  selectedFile = file;
+  document.getElementById('import-btn').disabled = false;
+
+  // ブラウザ側でプレビュー用にテキスト読み込み
+  const text = await readFileAsText(file);
+  const rows = parseCSV(text);
+  if (rows.length === 0) return;
+
+  parsedHeaders = rows[0];
+  parsedRows = rows.slice(1);
+
+  // エンコーディング表示 (ブラウザは自動検出できないので件数のみ)
+  document.getElementById('encoding-info').classList.remove('d-none');
+  document.getElementById('encoding-text').textContent = `${rows.length - 1} 行のデータを検出しました (ヘッダー除く)`;
+
+  // プレビュー
+  const preview = parsedRows.slice(0, 5);
+  const thead = document.getElementById('preview-thead');
+  const tbody = document.getElementById('preview-tbody');
+  // 最初の10列だけ表示
+  const showCols = parsedHeaders.slice(0, 10);
+  thead.innerHTML = `<tr>${showCols.map(h => `<th class="text-nowrap">${escHtml(h)}</th>`).join('')}</tr>`;
+  tbody.innerHTML = preview.map(row =>
+    `<tr>${showCols.map((_, i) => `<td class="text-nowrap">${escHtml(row[i] || '')}</td>`).join('')}</tr>`
+  ).join('');
+  document.getElementById('preview-info').textContent = `全 ${parsedHeaders.length} 列 / ${parsedRows.length} 行 (最初の10列を表示)`;
+  document.getElementById('preview-section').classList.remove('d-none');
+});
+
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsText(file, 'UTF-8');
+  });
+}
+
+// 簡易CSVパーサー
+function parseCSV(text) {
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const result = [];
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    result.push(splitCSVLine(line));
+  }
+  return result;
+}
+
+function splitCSVLine(line) {
+  const fields = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i+1] === '"') { current += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (ch === ',' && !inQuotes) {
+      fields.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  fields.push(current);
+  return fields;
+}
+
+// インポート実行
+document.getElementById('import-btn').addEventListener('click', async () => {
+  if (!selectedFile) return;
+  if (!confirm(`${parsedRows.length} 件のデータをインポートしますか？`)) return;
+
+  const formData = new FormData();
+  formData.append('file', selectedFile);
+
+  document.getElementById('import-btn').disabled = true;
+  document.getElementById('import-btn').innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>処理中...';
+
+  try {
+    const res = await fetch('/api/import/csv', { method: 'POST', body: formData });
+    const json = await res.json();
+
+    document.getElementById('import-btn').disabled = false;
+    document.getElementById('import-btn').innerHTML = '<i class="bi bi-upload me-1"></i>インポート実行';
+
+    if (json.success) {
+      const { success_count, error_count, errors, encoding, confidence } = json.data;
+      document.getElementById('res-success').textContent = success_count.toLocaleString();
+      document.getElementById('res-error').textContent = error_count.toLocaleString();
+      document.getElementById('res-encoding').textContent = `検出エンコーディング: ${encoding || '不明'} (信頼度: ${confidence ? Math.round(confidence * 100) + '%' : '-'})`;
+      document.getElementById('result-card').style.display = '';
+
+      if (errors && errors.length > 0) {
+        document.getElementById('error-list-section').classList.remove('d-none');
+        document.getElementById('error-list').innerHTML = errors.slice(0, 50).map(e =>
+          `<li class="list-group-item list-group-item-danger py-1 small">${e.row}行目: ${escHtml(e.error)}</li>`
+        ).join('');
+      } else {
+        document.getElementById('error-list-section').classList.add('d-none');
+      }
+    } else {
+      alert('インポートに失敗しました: ' + json.error);
+    }
+  } catch(err) {
+    document.getElementById('import-btn').disabled = false;
+    document.getElementById('import-btn').innerHTML = '<i class="bi bi-upload me-1"></i>インポート実行';
+    alert('通信エラー: ' + err.message);
+  }
+});
+
+// クリアボタン
+document.getElementById('clear-btn').addEventListener('click', () => {
+  document.getElementById('csv-file').value = '';
+  selectedFile = null;
+  document.getElementById('import-btn').disabled = true;
+  document.getElementById('preview-section').classList.add('d-none');
+  document.getElementById('encoding-info').classList.add('d-none');
+  document.getElementById('result-card').style.display = 'none';
+});
+</script>
+{% endblock %}

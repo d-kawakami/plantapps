@@ -1,0 +1,249 @@
+/* ==============================
+   機器台帳管理システム カスタムスタイル
+   ============================== */
+
+/* ネイビーテーマ */
+:root {
+  --navy: #0d1f3c;
+  --navy-hover: #162d56;
+}
+
+.bg-navy {
+  background-color: var(--navy) !important;
+}
+
+.btn-primary {
+  background-color: var(--navy);
+  border-color: var(--navy);
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+  background-color: var(--navy-hover);
+  border-color: var(--navy-hover);
+}
+
+.btn-outline-primary {
+  color: var(--navy);
+  border-color: var(--navy);
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--navy);
+  border-color: var(--navy);
+}
+
+.nav-tabs .nav-link.active {
+  color: var(--navy);
+  border-bottom-color: var(--navy);
+}
+
+.nav-tabs .nav-link:hover {
+  color: var(--navy-hover);
+}
+
+.page-link {
+  color: var(--navy);
+}
+
+.page-item.active .page-link {
+  background-color: var(--navy);
+  border-color: var(--navy);
+}
+
+.text-primary {
+  color: var(--navy) !important;
+}
+
+/* 老朽化率バッジ */
+.aging-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-weight: bold;
+}
+
+.badge-aging-red {
+  background-color: #f8d7da;
+  color: #842029;
+  border: 1px solid #f1aeb5;
+}
+
+.badge-aging-yellow {
+  background-color: #fff3cd;
+  color: #664d03;
+  border: 1px solid #ffe69c;
+}
+
+.badge-aging-green {
+  background-color: #d1e7dd;
+  color: #0a3622;
+  border: 1px solid #a3cfbb;
+}
+
+/* 下書き保存インジケーター */
+#draft-indicator {
+  background-color: rgba(255, 255, 255, 0.15);
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+/* 機器一覧テーブル */
+.equipment-table-wrap {
+  max-height: calc(100vh - 320px);
+  overflow-y: auto;
+}
+
+.equipment-table-wrap table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+}
+
+/* XSボタン */
+.btn-xs {
+  padding: 1px 6px;
+  font-size: 0.75rem;
+  border-radius: 3px;
+}
+
+/* フィルタパネル */
+#filter-panel {
+  transition: all 0.2s ease;
+}
+
+/* タブフォーム */
+.tab-pane {
+  padding-top: 1rem;
+}
+
+/* レスポンシブ対応テーブル */
+@media (max-width: 768px) {
+  .equipment-table-wrap {
+    max-height: none;
+    overflow-x: auto;
+  }
+
+  .equipment-table-wrap table {
+    min-width: 800px;
+  }
+
+  h4 {
+    font-size: 1.1rem;
+  }
+}
+
+/* カード小見出し */
+.card-header {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+/* dl行 */
+dl.row dt {
+  font-weight: 500;
+  color: #495057;
+}
+
+dl.row dd {
+  color: #212529;
+}
+
+/* ナビゲーションバー */
+.navbar-brand {
+  font-size: 1.1rem;
+}
+
+/* ダッシュボード統計カード */
+#stats-row .card {
+  transition: transform 0.1s;
+}
+
+#stats-row .card:hover {
+  transform: translateY(-2px);
+}
+
+/* テーブル行の老朽化ハイライト */
+.table-danger td {
+  background-color: rgba(220, 53, 69, 0.08) !important;
+}
+
+.table-warning td {
+  background-color: rgba(255, 193, 7, 0.1) !important;
+}
+
+/* インポートページ */
+#preview-table {
+  font-size: 0.8rem;
+}
+
+#preview-table td, #preview-table th {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ページネーション */
+.pagination .page-link {
+  font-size: 0.85rem;
+  padding: 4px 8px;
+}
+
+/* フォームラベル */
+.form-label {
+  font-weight: 500;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+/* スクロールバースタイル */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #adb5bd;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6c757d;
+}
+
+/* アラートバナー */
+#aging-banner .alert {
+  border-left: 4px solid;
+}
+
+#aging-banner .alert-danger {
+  border-left-color: #dc3545;
+}
+
+#aging-banner .alert-warning {
+  border-left-color: #ffc107;
+}
+
+/* タブ形式フォームのタブ強調 */
+#formTabs .nav-link {
+  font-size: 0.9rem;
+}
+
+#formTabs .nav-link.active {
+  font-weight: 600;
+}
+
+/* 列選択パネル */
+#col-selector-panel .form-check {
+  min-width: 120px;
+}

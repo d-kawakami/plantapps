@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ filename }} | Plant Media</title>
+    <style>
+        :root {
+            --nav-bg: #1e293b;
+            --accent: #0ea5e9;
+            --bg: #0f172a;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --border: #334155;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        nav {
+            background: var(--nav-bg);
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            height: 56px;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            flex-shrink: 0;
+        }
+        .nav-brand {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--accent);
+            white-space: nowrap;
+        }
+        .nav-link {
+            color: #cbd5e1;
+            text-decoration: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.15s, color 0.15s;
+            white-space: nowrap;
+        }
+        .nav-link:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .nav-links { display: flex; gap: 4px; margin-left: auto; }
+
+        .media-wrap {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        img, video {
+            max-width: 100%;
+            max-height: calc(100vh - 130px);
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            display: block;
+        }
+
+        .toolbar {
+            background: #1e293b;
+            border-top: 1px solid var(--border);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .filename-display {
+            flex: 1;
+            min-width: 0;
+            font-size: 13px;
+            color: var(--muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 18px;
+            border-radius: 7px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            transition: filter 0.15s;
+            white-space: nowrap;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-dl { background: var(--accent); color: #fff; }
+        .btn-dl:hover { filter: brightness(1.1); }
+        .btn-back { background: #334155; color: #e2e8f0; }
+        .btn-back:hover { background: #475569; }
+    </style>
+</head>
+<body>
+
+<nav>
+    <span class="nav-brand">&#9881; PLANT MEDIA</span>
+    <div class="nav-links">
+        <a href="/photo" class="nav-link">&#11014; 転送</a>
+        <a href="/list" class="nav-link">&#128247; 一覧</a>
+    </div>
+</nav>
+
+<div class="media-wrap">
+    {% if media_type == 'image' %}
+        <img src="/media/{{ filename }}" alt="{{ filename }}">
+    {% elif media_type == 'video' %}
+        <video controls autoplay>
+            <source src="/media/{{ filename }}">
+            お使いのブラウザは動画再生に対応していません。
+        </video>
+    {% else %}
+        <div style="text-align:center;color:#94a3b8;">
+            <div style="font-size:60px;margin-bottom:16px;">&#128196;</div>
+            <div style="font-size:16px;">プレビュー非対応のファイルです</div>
+        </div>
+    {% endif %}
+</div>
+
+<div class="toolbar">
+    <div class="filename-display">{{ filename }}</div>
+    <a href="/download/{{ filename }}" class="btn btn-dl">&#11015; ダウンロード</a>
+    <a href="/list" class="btn btn-back">&#8592; 一覧へ</a>
+</div>
+
+{% set active_app = 'photo' %}
+{% include 'bottom_nav.html' %}
+</body>
+</html>

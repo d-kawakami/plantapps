@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+{% block title %}機器一覧 - 機器台帳管理システム{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h4 class="mb-0"><i class="bi bi-list-ul me-2"></i>機器一覧</h4>
+  <div class="d-flex gap-2">
+    <button class="btn btn-sm btn-outline-secondary" id="col-selector-btn" title="列表示切替">
+      <i class="bi bi-layout-three-columns"></i> 列選択
+    </button>
+    <button class="btn btn-sm btn-outline-success" id="export-btn">
+      <i class="bi bi-download"></i> CSVエクスポート
+    </button>
+    <a href="/equipment/new" class="btn btn-sm btn-primary">
+      <i class="bi bi-plus-circle"></i> 新規登録
+    </a>
+  </div>
+</div>
+
+<!-- 検索フィルタ -->
+<div class="card mb-3">
+  <div class="card-header py-2 d-flex justify-content-between align-items-center" style="cursor:pointer;" id="filter-toggle">
+    <span><i class="bi bi-funnel me-1"></i>検索・絞り込み</span>
+    <i class="bi bi-chevron-down" id="filter-chevron"></i>
+  </div>
+  <div id="filter-panel">
+    <div class="card-body">
+      <div class="row g-2">
+        <div class="col-12 col-md-4 col-lg-3">
+          <label class="form-label small mb-1">施設名称</label>
+          <input type="text" class="form-control form-control-sm" id="f-facility_name" placeholder="施設名称">
+        </div>
+        <div class="col-12 col-md-4 col-lg-3">
+          <label class="form-label small mb-1">工種番号</label>
+          <input type="text" class="form-control form-control-sm" id="f-work_type" placeholder="例: 機械">
+        </div>
+        <div class="col-12 col-md-4 col-lg-3">
+          <label class="form-label small mb-1">大分類</label>
+          <input type="text" class="form-control form-control-sm" id="f-category_l" placeholder="大分類" list="dl-category_l">
+          <datalist id="dl-category_l"></datalist>
+        </div>
+        <div class="col-12 col-md-4 col-lg-3">
+          <label class="form-label small mb-1">中分類</label>
+          <input type="text" class="form-control form-control-sm" id="f-category_m" placeholder="中分類">
+        </div>
+        <div class="col-12 col-md-4 col-lg-3">
+          <label class="form-label small mb-1">小分類</label>
+          <input type="text" class="form-control form-control-sm" id="f-category_s" placeholder="小分類">
+        </div>
+        <div class="col-12 col-md-4 col-lg-3">
+          <label class="form-label small mb-1">機器名称</label>
+          <input type="text" class="form-control form-control-sm" id="f-q" placeholder="機器名称（部分一致）">
+        </div>
+        <div class="col-12 col-md-4 col-lg-3">
+          <label class="form-label small mb-1">製造所</label>
+          <input type="text" class="form-control form-control-sm" id="f-manufacturer" placeholder="製造所">
+        </div>
+        <div class="col-12 col-md-4 col-lg-3">
+          <label class="form-label small mb-1">稼働状況</label>
+          <select class="form-select form-select-sm" id="f-op_status">
+            <option value="">全て</option>
+            <option value="稼働中">稼働中</option>
+            <option value="停止">停止</option>
+            <option value="撤去">撤去</option>
+          </select>
+        </div>
+        <div class="col-12 col-md-4 col-lg-3">
+          <label class="form-label small mb-1">設置年月日 From</label>
+          <input type="date" class="form-control form-control-sm" id="f-installed_from">
+        </div>
+        <div class="col-12 col-md-4 col-lg-3">
+          <label class="form-label small mb-1">設置年月日 To</label>
+          <input type="date" class="form-control form-control-sm" id="f-installed_to">
+        </div>
+      </div>
+      <div class="mt-2 d-flex gap-2">
+        <button class="btn btn-sm btn-primary" id="search-btn"><i class="bi bi-search me-1"></i>検索</button>
+        <button class="btn btn-sm btn-outline-secondary" id="clear-btn"><i class="bi bi-x-circle me-1"></i>クリア</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 列選択パネル -->
+<div class="card mb-2 d-none" id="col-selector-panel">
+  <div class="card-body py-2">
+    <div class="d-flex flex-wrap gap-3" id="col-checkboxes"></div>
+  </div>
+</div>
+
+<!-- テーブル -->
+<div class="d-flex justify-content-between align-items-center mb-1">
+  <span class="small text-muted" id="result-count">読み込み中...</span>
+</div>
+
+<div class="table-responsive equipment-table-wrap">
+  <table class="table table-sm table-hover table-bordered mb-0" id="equipment-table">
+    <thead class="table-light sticky-top">
+      <tr id="table-header-row"></tr>
+    </thead>
+    <tbody id="equipment-table-body">
+      <tr><td colspan="12" class="text-center py-4 text-muted">読み込み中...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ページネーション -->
+<nav class="mt-2" id="pagination-nav"></nav>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const COLUMNS = [
+  { key: 'equipment_name', label: '機器名称', always: true },
+  { key: 'model',          label: '形式' },
+  { key: 'facility_name',  label: '施設名称' },
+  { key: 'location',       label: '設置場所' },
+  { key: 'category_l',     label: '大分類' },
+  { key: 'category_m',     label: '中分類' },
+  { key: 'category_s',     label: '小分類' },
+  { key: 'op_status',      label: '稼働状況' },
+  { key: 'installed_at',   label: '設置年月日' },
+  { key: 'service_life',   label: '耐用年数' },
+  { key: '_aging_rate',    label: '老朽化率' },
+];
+
+const LS_COL_KEY = 'daicho_visible_cols';
+let visibleCols = JSON.parse(localStorage.getItem(LS_COL_KEY) || 'null');
+if (!visibleCols) {
+  visibleCols = COLUMNS.map(c => c.key);
+}
+
+let currentPage = 1;
+const PER_PAGE = 50;
+let currentFilters = {};
+
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function calcAgingRate(installedAt, serviceLife) {
+  if (!installedAt || !serviceLife) return null;
+  const inst = new Date(installedAt);
+  const today = new Date();
+  const elapsed = (today - inst) / (365.25 * 24 * 3600 * 1000);
+  return (elapsed / serviceLife) * 100;
+}
+
+function buildHeader() {
+  const tr = document.getElementById('table-header-row');
+  tr.innerHTML = COLUMNS.filter(c => visibleCols.includes(c.key))
+    .map(c => `<th>${c.label}</th>`).join('') + '<th>操作</th>';
+}
+
+function buildColCheckboxes() {
+  const container = document.getElementById('col-checkboxes');
+  container.innerHTML = COLUMNS.filter(c => !c.always).map(c => `
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="col-${c.key}" value="${c.key}"
+        ${visibleCols.includes(c.key) ? 'checked' : ''} onchange="toggleCol('${c.key}', this.checked)">
+      <label class="form-check-label small" for="col-${c.key}">${c.label}</label>
+    </div>
+  `).join('');
+}
+
+function toggleCol(key, checked) {
+  if (checked && !visibleCols.includes(key)) visibleCols.push(key);
+  if (!checked) visibleCols = visibleCols.filter(k => k !== key);
+  localStorage.setItem(LS_COL_KEY, JSON.stringify(visibleCols));
+  buildHeader();
+  loadEquipment();
+}
+
+function getFilters() {
+  return {
+    facility_name: document.getElementById('f-facility_name').value,
+    work_type: document.getElementById('f-work_type').value,
+    category_l: document.getElementById('f-category_l').value,
+    category_m: document.getElementById('f-category_m').value,
+    category_s: document.getElementById('f-category_s').value,
+    q: document.getElementById('f-q').value,
+    manufacturer: document.getElementById('f-manufacturer').value,
+    op_status: document.getElementById('f-op_status').value,
+    installed_from: document.getElementById('f-installed_from').value,
+    installed_to: document.getElementById('f-installed_to').value,
+  };
+}
+
+async function loadEquipment(page = 1) {
+  currentPage = page;
+  currentFilters = getFilters();
+  const params = new URLSearchParams({ ...currentFilters, page, per_page: PER_PAGE });
+  const tbody = document.getElementById('equipment-table-body');
+  tbody.innerHTML = '<tr><td colspan="15" class="text-center py-3 text-muted">読み込み中...</td></tr>';
+
+  try {
+    const res = await fetch('/api/equipment?' + params.toString());
+    const json = await res.json();
+    if (!json.success) { tbody.innerHTML = `<tr><td colspan="15" class="text-danger">${json.error}</td></tr>`; return; }
+    const { items, total } = json.data;
+
+    document.getElementById('result-count').textContent = `全 ${total.toLocaleString()} 件 (${page}ページ目)`;
+
+    if (items.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="15" class="text-center py-4 text-muted">該当データなし</td></tr>';
+    } else {
+      tbody.innerHTML = items.map(item => {
+        const agingRate = calcAgingRate(item.installed_at, item.service_life);
+        const rowClass = agingRate !== null && agingRate >= 80 ? 'table-danger' : (agingRate !== null && agingRate >= 60 ? 'table-warning' : '');
+        const cells = COLUMNS.filter(c => visibleCols.includes(c.key)).map(c => {
+          if (c.key === '_aging_rate') {
+            if (agingRate === null) return '<td>-</td>';
+            const badgeClass = agingRate >= 80 ? 'badge-aging-red' : (agingRate >= 60 ? 'badge-aging-yellow' : 'badge-aging-green');
+            return `<td><span class="aging-badge ${badgeClass}">${agingRate.toFixed(1)}%</span></td>`;
+          }
+          if (c.key === 'op_status') {
+            const sc = item.op_status === '稼働中' ? 'text-success' : (item.op_status === '停止' ? 'text-warning fw-bold' : 'text-secondary');
+            return `<td class="${sc}">${escHtml(item.op_status || '')}</td>`;
+          }
+          if (c.key === 'equipment_name') {
+            return `<td><a href="/equipment/${item.id}">${escHtml(item.equipment_name)}</a></td>`;
+          }
+          return `<td>${escHtml(item[c.key] || '')}</td>`;
+        }).join('');
+        return `<tr class="${rowClass}">
+          ${cells}
+          <td class="text-nowrap">
+            <a href="/equipment/${item.id}" class="btn btn-xs btn-outline-info me-1" title="詳細"><i class="bi bi-eye"></i></a>
+            <a href="/equipment/${item.id}/edit" class="btn btn-xs btn-outline-primary me-1" title="編集"><i class="bi bi-pencil"></i></a>
+            <button class="btn btn-xs btn-outline-secondary" onclick="duplicateEquipment(${item.id})" title="複製"><i class="bi bi-copy"></i></button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    renderPagination(total, page);
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="15" class="text-danger">エラー: ${e.message}</td></tr>`;
+  }
+}
+
+function renderPagination(total, page) {
+  const totalPages = Math.ceil(total / PER_PAGE);
+  const nav = document.getElementById('pagination-nav');
+  if (totalPages <= 1) { nav.innerHTML = ''; return; }
+
+  let pages = [];
+  pages.push(`<li class="page-item ${page === 1 ? 'disabled' : ''}"><a class="page-link" href="#" onclick="loadEquipment(${page - 1});return false;">前</a></li>`);
+
+  let start = Math.max(1, page - 3);
+  let end = Math.min(totalPages, page + 3);
+  if (start > 1) pages.push(`<li class="page-item disabled"><span class="page-link">...</span></li>`);
+  for (let i = start; i <= end; i++) {
+    pages.push(`<li class="page-item ${i === page ? 'active' : ''}"><a class="page-link" href="#" onclick="loadEquipment(${i});return false;">${i}</a></li>`);
+  }
+  if (end < totalPages) pages.push(`<li class="page-item disabled"><span class="page-link">...</span></li>`);
+  pages.push(`<li class="page-item ${page === totalPages ? 'disabled' : ''}"><a class="page-link" href="#" onclick="loadEquipment(${page + 1});return false;">次</a></li>`);
+
+  nav.innerHTML = `<ul class="pagination pagination-sm">${pages.join('')}</ul>`;
+}
+
+async function duplicateEquipment(id) {
+  if (!confirm('この機器を複製しますか？')) return;
+  const res = await fetch(`/api/equipment/${id}/duplicate`, { method: 'POST' });
+  const json = await res.json();
+  if (json.success) {
+    window.location.href = `/equipment/${json.data.id}/edit`;
+  } else {
+    alert('複製に失敗しました: ' + json.error);
+  }
+}
+
+// カテゴリオートコンプリート
+async function loadCategoryList() {
+  const res = await fetch('/api/categories');
+  const json = await res.json();
+  if (!json.success) return;
+  const dl = document.getElementById('dl-category_l');
+  const categories = [...new Set(json.data.map(c => c.category_l).filter(Boolean))];
+  dl.innerHTML = categories.map(c => `<option value="${escHtml(c)}">`).join('');
+}
+
+// フィルタ表示切替
+document.getElementById('filter-toggle').addEventListener('click', () => {
+  const panel = document.getElementById('filter-panel');
+  const chevron = document.getElementById('filter-chevron');
+  const isHidden = panel.style.display === 'none';
+  panel.style.display = isHidden ? '' : 'none';
+  chevron.className = isHidden ? 'bi bi-chevron-up' : 'bi bi-chevron-down';
+});
+
+document.getElementById('search-btn').addEventListener('click', () => loadEquipment(1));
+document.getElementById('clear-btn').addEventListener('click', () => {
+  ['f-facility_name','f-work_type','f-category_l','f-category_m','f-category_s','f-q','f-manufacturer','f-installed_from','f-installed_to'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('f-op_status').value = '';
+  loadEquipment(1);
+});
+
+// Enterキーで検索
+document.querySelectorAll('#filter-panel input, #filter-panel select').forEach(el => {
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') loadEquipment(1); });
+});
+
+// 列選択トグル
+document.getElementById('col-selector-btn').addEventListener('click', () => {
+  document.getElementById('col-selector-panel').classList.toggle('d-none');
+});
+
+// CSVエクスポート
+document.getElementById('export-btn').addEventListener('click', () => {
+  const params = new URLSearchParams(getFilters());
+  window.location.href = '/api/export/csv?' + params.toString();
+});
+
+buildHeader();
+buildColCheckboxes();
+loadCategoryList();
+loadEquipment();
+</script>
+{% endblock %}

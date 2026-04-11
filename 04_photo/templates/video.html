@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Upload</title>
+    <style>
+        body {
+            /* font-size: 20px;*/
+            width: 95%;
+        }
+        h1 {
+            /* font-size: 36px; */
+            font-weight: bold;
+        }
+        a {
+            /* font-size: 20px; */
+        }
+        h4 {
+            /* font-size: 20px; */
+            font-weight: bold;
+        }
+        button, input {
+            /* font-size: 16px;*/
+            margin: 10px;
+        }
+        .thumbnail {
+            width: 150px;
+            height: auto;
+            margin: 10px;
+            padding: 5px;
+        }
+        .thumbnail-list, .filename-list {
+            display: flex;
+            flex-wrap: wrap;
+            list-style-type: none;
+            padding: 0;
+        }
+        .thumbnail-list li {
+            margin: 10px;
+        }
+        .filename-list {
+            display: none;
+            flex-direction: column;
+            width: 95%;
+        }
+        .filename-list li {
+            margin: 10px 0;
+            width: 100%;
+            text-align: left;
+        }
+        .progress-bar {
+            width: 60%;
+            background-color: #f3f3f3;
+            border-radius: 2px;
+            margin-top: 20px;
+        }
+        .progress {
+            width: 0;
+            height: 20px;
+            background-color: #4caf50;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <div style="font-size: 28px; font-weight: bold; margin: 0;">写真・動画アップロード</div>
+
+    <h2>カメラ映像:</h2>
+    <img src="{{ video_feed }}" width=800px>
+    <form action="/set_ip" method="POST">
+        <label for="client_ip">端末IPアドレス:</label>
+        <input type="text" id="client_ip" name="client_ip" value="{{ client_ip }}" readonly>
+        <button type="submit">IPアドレスを送信</button>
+    </form>
+    <!--端末IPアドレス:{{ client_ip }}<br>
+    VideoFeed:{{ video_feed }}-->
+<!-- JavaScriptでページのリロードを処理 -->
+<script>
+    document.getElementById('ipForm').addEventListener('submit', function(event) {
+        // フォームの送信は通常通り実行される（ページがリダイレクトされる）
+    });
+</script>
+
+<!-- IP Webcamアプリを起動するためのボタン -->
+<button id="startWebcam">IP Webcamを起動</button>
+<script>
+    document.getElementById('startWebcam').addEventListener('click', function() {
+        // Intent URI スキームを使ってアプリを起動
+        //window.location.href = 'intent://startIPWebcam#Intent;scheme=http;package=com.pas.webcam;end;';
+        //window.location.href = 'intent://#Intent;package=com.pas.webcam;component=com.pas.webcam/.Configuration;end;';
+        window.location.href = 'intent://#Intent;package=com.pas.webcam;action=android.intent.action.RUN;component=com.pas.webcam/.Rolling;end;';
+
+});
+</script>
+
+{% set active_app = 'photo' %}
+{% include 'bottom_nav.html' %}
+</body>
+</html>

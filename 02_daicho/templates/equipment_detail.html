@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+{% block title %}{{ equipment.equipment_name }} - 機器台帳管理システム{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">
+    <i class="bi bi-info-circle me-2"></i>{{ equipment.equipment_name }}
+  </h4>
+  <div class="d-flex gap-2">
+    <a href="/equipment" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>一覧
+    </a>
+    <a href="/equipment/{{ equipment.id }}/edit" class="btn btn-sm btn-primary">
+      <i class="bi bi-pencil me-1"></i>編集
+    </a>
+    <button class="btn btn-sm btn-outline-info" id="dup-btn">
+      <i class="bi bi-copy me-1"></i>複製
+    </button>
+    <button class="btn btn-sm btn-danger" id="del-btn">
+      <i class="bi bi-trash me-1"></i>削除
+    </button>
+  </div>
+</div>
+
+<!-- 老朽化率バナー -->
+<div id="aging-banner" class="mb-3"></div>
+
+<div class="row g-3">
+  <!-- 基本情報 -->
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-gear me-1"></i>基本情報</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-5">機器名称</dt><dd class="col-7">{{ equipment.equipment_name }}</dd>
+          <dt class="col-5">形式</dt><dd class="col-7">{{ equipment.model or '-' }}</dd>
+          <dt class="col-5">工種番号</dt><dd class="col-7">{{ equipment.work_type or '-' }}</dd>
+          <dt class="col-5">設置場所</dt><dd class="col-7">{{ equipment.location or '-' }}</dd>
+          <dt class="col-5">製造所</dt><dd class="col-7">{{ equipment.manufacturer or '-' }}</dd>
+          <dt class="col-5">稼働状況</dt>
+          <dd class="col-7">
+            {% if equipment.op_status == '稼働中' %}<span class="badge bg-success">稼働中</span>
+            {% elif equipment.op_status == '停止' %}<span class="badge bg-warning text-dark">停止</span>
+            {% elif equipment.op_status == '撤去' %}<span class="badge bg-secondary">撤去</span>
+            {% else %}<span>{{ equipment.op_status or '-' }}</span>{% endif %}
+          </dd>
+          <dt class="col-5">系列番号</dt><dd class="col-7">{{ equipment.series_no or '-' }}</dd>
+          <dt class="col-5">号機番号</dt><dd class="col-7">{{ equipment.unit_no or '-' }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <!-- 施設・分類 -->
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-building me-1"></i>施設・分類</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-5">施設番号</dt><dd class="col-7">{{ equipment.facility_no or '-' }}</dd>
+          <dt class="col-5">施設名称</dt><dd class="col-7">{{ equipment.facility_name or '-' }}</dd>
+          <dt class="col-5">顧客コード</dt><dd class="col-7">{{ equipment.customer_code or '-' }}</dd>
+          <dt class="col-5">大分類</dt><dd class="col-7">{{ equipment.category_l or '-' }}</dd>
+          <dt class="col-5">中分類</dt><dd class="col-7">{{ equipment.category_m or '-' }}</dd>
+          <dt class="col-5">小分類</dt><dd class="col-7">{{ equipment.category_s or '-' }}</dd>
+          <dt class="col-5">管理部署</dt><dd class="col-7">{{ equipment.dept_code or '-' }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <!-- 資産情報 & 老朽化 -->
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-bank me-1"></i>資産情報・老朽化</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-5">設置年月日</dt><dd class="col-7">{{ equipment.installed_at or '-' }}</dd>
+          <dt class="col-5">撤去年月日</dt><dd class="col-7">{{ equipment.removed_at or '-' }}</dd>
+          <dt class="col-5">耐用年数</dt><dd class="col-7">{{ equipment.service_life ~ '年' if equipment.service_life else '-' }}</dd>
+          <dt class="col-5">目標耐用年数</dt><dd class="col-7">{{ equipment.target_life ~ '年' if equipment.target_life else '-' }}</dd>
+          <dt class="col-5">取得価額</dt><dd class="col-7">{{ '{:,}円'.format(equipment.acquisition_cost) if equipment.acquisition_cost else '-' }}</dd>
+          <dt class="col-5">再取得価額</dt><dd class="col-7">{{ '{:,}円'.format(equipment.replacement_cost) if equipment.replacement_cost else '-' }}</dd>
+          <dt class="col-5">資産グループ</dt><dd class="col-7">{{ equipment.asset_group or '-' }}</dd>
+          <dt class="col-5">固定資産番号</dt><dd class="col-7">{{ equipment.fixed_asset_no or '-' }}</dd>
+          <dt class="col-5 fw-bold">経過年数</dt><dd class="col-7 fw-bold" id="elapsed-years">-</dd>
+          <dt class="col-5 fw-bold">残存耐用年数</dt><dd class="col-7 fw-bold" id="remaining-life">-</dd>
+          <dt class="col-5 fw-bold">老朽化率</dt><dd class="col-7" id="aging-rate-cell">-</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <!-- 保全・劣化 -->
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-tools me-1"></i>保全・劣化</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-6">保全方法</dt><dd class="col-6">{{ equipment.maintenance_method or '-' }}</dd>
+          <dt class="col-6">設備重要度</dt><dd class="col-6">{{ equipment.importance or '-' }}</dd>
+          <dt class="col-6">コストインパクト</dt><dd class="col-6">{{ equipment.cost_impact or '-' }}</dd>
+          <dt class="col-6">法定点検</dt>
+          <dd class="col-6">{{ '有' if equipment.legal_inspection else '無' }}</dd>
+          <dt class="col-6">劣化予兆判断</dt>
+          <dd class="col-6">{{ '可' if equipment.degradation_flag else '不可' }}</dd>
+          <dt class="col-6">高度化対象</dt>
+          <dd class="col-6">{{ '対象' if equipment.upgrade_target else '非対象' }}</dd>
+          <dt class="col-6">劣化度大</dt>
+          <dd class="col-6">{{ '有' if equipment.high_degradation else '無' }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <!-- 書類・仕様・備考 -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-file-text me-1"></i>書類・仕様・備考</div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-12 col-md-4">
+            <dl class="row mb-0">
+              <dt class="col-6">様式番号</dt><dd class="col-6">{{ equipment.form_no or '-' }}</dd>
+              <dt class="col-6">保守様式ID</dt><dd class="col-6">{{ equipment.maintenance_form_id or '-' }}</dd>
+              <dt class="col-6">完成図書</dt><dd class="col-6">{{ '有' if equipment.completion_docs else '無' }}</dd>
+              <dt class="col-6">保点要領書</dt><dd class="col-6">{{ '有' if equipment.maintenance_manual else '無' }}</dd>
+              <dt class="col-6">取扱説明書</dt><dd class="col-6">{{ '有' if equipment.instruction_manual else '無' }}</dd>
+              <dt class="col-6">予備品リスト</dt><dd class="col-6">{{ '有' if equipment.spare_parts_list else '無' }}</dd>
+            </dl>
+          </div>
+          <div class="col-12 col-md-8">
+            <div class="mb-2"><strong>仕様:</strong><br>{{ equipment.spec or '-' }}</div>
+            <div class="mb-2"><strong>記事１:</strong><br>{{ equipment.notes1 or '-' }}</div>
+            <div><strong>記事２:</strong><br>{{ equipment.notes2 or '-' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 測定履歴 -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-graph-up me-1"></i>測定履歴</span>
+        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#measurementModal">
+          <i class="bi bi-plus me-1"></i>測定値追加
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>測定日</th>
+                <th>測定値</th>
+                <th>許容限界値</th>
+                <th>備考</th>
+                <th>記録者</th>
+              </tr>
+            </thead>
+            <tbody id="measurement-tbody">
+              <tr><td colspan="5" class="text-center text-muted py-2">読み込み中...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- メタ情報 -->
+  <div class="col-12">
+    <div class="text-muted small">
+      ID: {{ equipment.id }} |
+      レコードID: {{ equipment.record_id or '-' }} |
+      登録日時: {{ equipment.created_at or '-' }} |
+      更新日時: {{ equipment.updated_at or '-' }} |
+      更新者: {{ equipment.updated_by or '-' }}
+    </div>
+  </div>
+</div>
+
+<!-- 測定値追加モーダル -->
+<div class="modal fade" id="measurementModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">測定値追加</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">測定日 <span class="text-danger">*</span></label>
+          <input type="date" class="form-control" id="m-measured_at">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">測定値</label>
+          <input type="number" step="any" class="form-control" id="m-value">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">許容限界値</label>
+          <input type="number" step="any" class="form-control" id="m-threshold">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">備考</label>
+          <input type="text" class="form-control" id="m-note">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">記録者</label>
+          <input type="text" class="form-control" id="m-recorded_by">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+        <button class="btn btn-primary" id="m-submit-btn">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const EQ_ID = {{ equipment.id }};
+const INSTALLED_AT = {{ (equipment.installed_at | tojson) if equipment.installed_at else 'null' }};
+const SERVICE_LIFE = {{ equipment.service_life | tojson if equipment.service_life else 'null' }};
+
+// 老朽化率計算
+function calcAging() {
+  if (!INSTALLED_AT || !SERVICE_LIFE) return;
+  const inst = new Date(INSTALLED_AT);
+  const today = new Date();
+  const elapsedDays = (today - inst) / (24 * 3600 * 1000);
+  const elapsedYears = elapsedDays / 365.25;
+  const agingRate = (elapsedYears / SERVICE_LIFE) * 100;
+  const remaining = SERVICE_LIFE - elapsedYears;
+
+  document.getElementById('elapsed-years').textContent = elapsedYears.toFixed(1) + '年';
+  document.getElementById('remaining-life').textContent = remaining.toFixed(1) + '年';
+
+  const cell = document.getElementById('aging-rate-cell');
+  const banner = document.getElementById('aging-banner');
+  let badgeClass, bannerClass, bannerText;
+  if (agingRate >= 80) {
+    badgeClass = 'badge-aging-red';
+    bannerClass = 'alert alert-danger';
+    bannerText = `老朽化アラート: 老朽化率 ${agingRate.toFixed(1)}% (耐用年数の80%以上経過)`;
+  } else if (agingRate >= 60) {
+    badgeClass = 'badge-aging-yellow';
+    bannerClass = 'alert alert-warning';
+    bannerText = `老朽化注意: 老朽化率 ${agingRate.toFixed(1)}% (耐用年数の60%以上経過)`;
+  } else {
+    badgeClass = 'badge-aging-green';
+    bannerClass = '';
+    bannerText = '';
+  }
+  cell.innerHTML = `<span class="aging-badge ${badgeClass}">${agingRate.toFixed(1)}%</span>`;
+  if (bannerText) {
+    banner.innerHTML = `<div class="${bannerClass}"><i class="bi bi-exclamation-triangle me-2"></i>${bannerText}</div>`;
+  }
+}
+
+// 測定履歴ロード
+async function loadMeasurements() {
+  const res = await fetch(`/api/equipment/${EQ_ID}/measurements`);
+  const json = await res.json();
+  const tbody = document.getElementById('measurement-tbody');
+  if (!json.success || json.data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-2">測定記録なし</td></tr>';
+    return;
+  }
+  tbody.innerHTML = json.data.map(m => `<tr>
+    <td>${m.measured_at || ''}</td>
+    <td>${m.value !== null ? m.value : '-'}</td>
+    <td>${m.threshold !== null ? m.threshold : '-'}</td>
+    <td>${m.note || ''}</td>
+    <td>${m.recorded_by || ''}</td>
+  </tr>`).join('');
+}
+
+// 測定値保存
+document.getElementById('m-submit-btn').addEventListener('click', async () => {
+  const measuredAt = document.getElementById('m-measured_at').value;
+  if (!measuredAt) { alert('測定日は必須です'); return; }
+  const data = {
+    measured_at: measuredAt,
+    value: document.getElementById('m-value').value || null,
+    threshold: document.getElementById('m-threshold').value || null,
+    note: document.getElementById('m-note').value || null,
+    recorded_by: document.getElementById('m-recorded_by').value || null,
+  };
+  const res = await fetch(`/api/equipment/${EQ_ID}/measurements`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (json.success) {
+    bootstrap.Modal.getInstance(document.getElementById('measurementModal')).hide();
+    loadMeasurements();
+  } else {
+    alert('保存に失敗しました: ' + json.error);
+  }
+});
+
+// 複製ボタン
+document.getElementById('dup-btn').addEventListener('click', async () => {
+  if (!confirm('この機器を複製しますか？')) return;
+  const res = await fetch(`/api/equipment/${EQ_ID}/duplicate`, { method: 'POST' });
+  const json = await res.json();
+  if (json.success) {
+    window.location.href = `/equipment/${json.data.id}/edit`;
+  } else {
+    alert('複製に失敗しました: ' + json.error);
+  }
+});
+
+// 削除ボタン
+document.getElementById('del-btn').addEventListener('click', async () => {
+  if (!confirm('この機器を削除しますか？\n（論理削除のため復元可能です）')) return;
+  const res = await fetch(`/api/equipment/${EQ_ID}`, { method: 'DELETE' });
+  const json = await res.json();
+  if (json.success) {
+    window.location.href = '/equipment';
+  } else {
+    alert('削除に失敗しました: ' + json.error);
+  }
+});
+
+calcAging();
+loadMeasurements();
+</script>
+{% endblock %}

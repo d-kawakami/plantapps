@@ -1,0 +1,159 @@
+<!-- ============================================================
+  Plant Apps 共通ボトムナビゲーション
+  使い方: active_app 変数に下記いずれかを設定して include する
+    inspection / equipment / handover / photo
+  ============================================================ -->
+<style>
+  /* ---- Plant Bottom Nav ---- */
+  .plant-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    z-index: 9999;
+    /* iOS セーフエリア対応 */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+  }
+  .plant-nav-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 56px;
+    gap: 3px;
+    text-decoration: none;
+    color: #94a3b8;
+    font-size: 10px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+    transition: color 0.15s ease;
+    padding: 6px 4px;
+    /* 44px 以上のタップターゲット確保 */
+    min-width: 44px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    position: relative;
+  }
+  .plant-nav-tab:hover {
+    color: #64748b;
+    background: #f8fafc;
+  }
+  .plant-nav-tab.plant-nav-active {
+    color: #2563eb;
+  }
+  .plant-nav-tab.plant-nav-active::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20%;
+    right: 20%;
+    height: 2px;
+    background: #2563eb;
+    border-radius: 0 0 2px 2px;
+  }
+  .plant-nav-tab svg {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+  .plant-nav-label {
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: 0.02em;
+  }
+  /* メインコンテンツにボトムナビ分の余白を追加 */
+  body.has-plant-nav {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  }
+</style>
+
+<nav class="plant-bottom-nav" aria-label="アプリナビゲーション">
+
+  <!-- 引継ぎノート -->
+  <a id="plant-nav-handover"
+     href="#"
+     class="plant-nav-tab {% if active_app == 'handover' %}plant-nav-active{% endif %}"
+     aria-label="引継ぎノート"
+     aria-current="{% if active_app == 'handover' %}page{% else %}false{% endif %}">
+    <!-- lucide: ClipboardList -->
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+      <line x1="12" y1="11" x2="16" y2="11"/>
+      <line x1="12" y1="16" x2="16" y2="16"/>
+      <line x1="8" y1="11" x2="8.01" y2="11"/>
+      <line x1="8" y1="16" x2="8.01" y2="16"/>
+    </svg>
+    <span class="plant-nav-label">引継ぎ</span>
+  </a>
+
+  <!-- 機器台帳 -->
+  <a id="plant-nav-equipment"
+     href="#"
+     class="plant-nav-tab {% if active_app == 'equipment' %}plant-nav-active{% endif %}"
+     aria-label="機器台帳"
+     aria-current="{% if active_app == 'equipment' %}page{% else %}false{% endif %}">
+    <!-- lucide: Database -->
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <ellipse cx="12" cy="5" rx="9" ry="3"/>
+      <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+      <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+    </svg>
+    <span class="plant-nav-label">機器台帳</span>
+  </a>
+
+  <!-- 日常点検 -->
+  <a id="plant-nav-inspection"
+     href="#"
+     class="plant-nav-tab {% if active_app == 'inspection' %}plant-nav-active{% endif %}"
+     aria-label="日常点検"
+     aria-current="{% if active_app == 'inspection' %}page{% else %}false{% endif %}">
+    <!-- lucide: CheckSquare -->
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="9 11 12 14 22 4"/>
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+    </svg>
+    <span class="plant-nav-label">日常点検</span>
+  </a>
+
+  <!-- 写真管理 -->
+  <a id="plant-nav-photo"
+     href="#"
+     class="plant-nav-tab {% if active_app == 'photo' %}plant-nav-active{% endif %}"
+     aria-label="写真管理"
+     aria-current="{% if active_app == 'photo' %}page{% else %}false{% endif %}">
+    <!-- lucide: Image -->
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+      <circle cx="8.5" cy="8.5" r="1.5"/>
+      <polyline points="21 15 16 10 5 21"/>
+    </svg>
+    <span class="plant-nav-label">写真管理</span>
+  </a>
+
+</nav>
+
+<script>
+/* Plant Apps ナビゲーション — 動的URL設定 */
+(function () {
+  var h = window.location.hostname;
+  var PORTS = { handover: 5003, equipment: 5002, inspection: 5001, photo: 5004 };
+  var proto = window.location.protocol;  // http: or https:
+  Object.keys(PORTS).forEach(function (key) {
+    var el = document.getElementById('plant-nav-' + key);
+    if (el) el.href = proto + '//' + h + ':' + PORTS[key];
+  });
+  /* body にクラスを付与してコンテンツ余白を確保 */
+  document.body.classList.add('has-plant-nav');
+})();
+</script>

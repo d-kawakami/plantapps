@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="theme-color" content="#2c5f8a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="日常点検">
+  <title>日常点検アプリ</title>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <link rel="icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+  <div id="offline-banner">⚠ オフラインモード — 結果はローカルに保存されます</div>
+
+  <header>
+    <h1>📋 日常点検アプリ</h1>
+    <div class="week-nav" id="week-nav">
+      <button class="week-nav-btn" id="week-prev" aria-label="前の週">&#8249;</button>
+      <span class="week-nav-label" id="week-nav-label"></span>
+      <button class="week-nav-btn" id="week-next" aria-label="次の週" disabled>&#8250;</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- 曜日選択グリッド -->
+    <div class="day-grid">
+      <a class="day-card" href="/inspect/1" data-day="1">
+        <div class="day-label">月</div>
+        <div class="day-name">月曜日</div>
+        <div class="day-sub">沈砂池棟</div>
+      </a>
+      <a class="day-card" href="/inspect/2" data-day="2">
+        <div class="day-label">火</div>
+        <div class="day-name">火曜日</div>
+        <div class="day-sub">処理水再利用・塩素接触棟ほか</div>
+      </a>
+      <a class="day-card" href="/inspect/3" data-day="3">
+        <div class="day-label">水</div>
+        <div class="day-name">水曜日</div>
+        <div class="day-sub">ポンプ施設・特高棟ほか（週別）</div>
+      </a>
+      <a class="day-card" href="/inspect/4" data-day="4">
+        <div class="day-label">木</div>
+        <div class="day-name">木曜日</div>
+        <div class="day-sub">二次処理棟・水処理施設</div>
+      </a>
+      <a class="day-card" href="/inspect/5" data-day="5">
+        <div class="day-label">金</div>
+        <div class="day-name">金曜日</div>
+        <div class="day-sub">7・8系水処理棟・送風機棟ほか</div>
+      </a>
+    </div>
+
+    <!-- Excel書き出し -->
+    <div style="margin-top:1rem;background:#fff;border-radius:8px;padding:.75rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,.1)">
+      <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+        <label style="font-size:.85rem;font-weight:700;color:#2c5f8a;white-space:nowrap">📥 Excel書き出し:</label>
+        <!-- 日/週 トグル -->
+        <div style="display:flex;border:1px solid #d0d8e4;border-radius:8px;overflow:hidden;font-size:.8rem;font-weight:700">
+          <button id="export-mode-day"
+                  style="padding:.3rem .75rem;background:#2c5f8a;color:#fff;border:none;cursor:pointer">
+            日単位
+          </button>
+          <button id="export-mode-week"
+                  style="padding:.3rem .75rem;background:#fff;color:#2c5f8a;border:none;cursor:pointer">
+            週単位
+          </button>
+        </div>
+        <input type="date" id="export-date" style="flex:1;min-width:140px;padding:.35rem .6rem;border:1px solid #d0d8e4;border-radius:8px;font-size:.85rem">
+        <a id="export-link" href="#" target="_blank" class="export-btn">⬇ ダウンロード</a>
+      </div>
+      <!-- 週単位選択時の範囲プレビュー -->
+      <div id="week-range-preview" style="display:none;margin-top:.45rem;font-size:.8rem;color:#555;padding-left:.1rem"></div>
+    </div>
+
+    <!-- 点検表インポート -->
+    <details id="import-section" style="margin-top:1rem;background:#fff;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.1);overflow:hidden">
+      <summary style="cursor:pointer;font-size:.85rem;font-weight:700;color:#2c5f8a;padding:.75rem 1rem;user-select:none">
+        📂 点検表Excelインポート（マスタ更新）
+      </summary>
+      <div style="padding:.75rem 1rem;border-top:1px solid #e8eef4">
+        <p style="margin:0 0 .6rem;font-size:.8rem;color:#666">
+          「点検表(マスタ)」シートを含む .xlsm / .xlsx を選択してインポートします。<br>
+          <strong style="color:#c0392b">⚠ inspection_items テーブルが上書きされます。</strong>
+        </p>
+        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+          <label id="import-file-label" style="display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .8rem;background:#eef3f8;border:1px solid #d0d8e4;border-radius:8px;cursor:pointer;font-size:.85rem;color:#2c5f8a;font-weight:600">
+            📁 ファイル選択
+            <input type="file" id="import-file" accept=".xlsx,.xlsm" style="display:none">
+          </label>
+          <span id="import-filename" style="font-size:.8rem;color:#555;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">（未選択）</span>
+          <button id="import-btn" disabled style="padding:.35rem .9rem;background:#2c5f8a;color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;opacity:.5">
+            ▶ インポート実行
+          </button>
+        </div>
+        <div id="import-result" style="display:none;margin-top:.75rem;padding:.6rem .8rem;border-radius:6px;font-size:.8rem;font-family:monospace;white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto"></div>
+      </div>
+    </details>
+
+    <!-- 使い方ガイド -->
+    <details style="margin-top:1.5rem;background:#fff;border-radius:8px;padding:.75rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,.1)">
+      <summary style="cursor:pointer;font-weight:700;color:#2c5f8a">使い方</summary>
+      <ol style="margin-top:.75rem;padding-left:1.5rem;line-height:2;font-size:.9rem">
+        <li>上の曜日カードをタップして点検を開始</li>
+        <li>点検番号ごとに <strong>〇 / × / △</strong> をタップして結果を入力</li>
+        <li>メモが必要な場合は「✏️ メモ」ボタンをタップ</li>
+        <li>結果は自動保存されます（オフライン時はローカルに保存後、オンライン復帰で同期）</li>
+      </ol>
+    </details>
+
+    <!-- 全結果リセット -->
+    <div style="margin-top:1rem;background:#fff;border-radius:8px;padding:.75rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,.1);display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+      <label style="font-size:.85rem;font-weight:700;color:#c0392b;white-space:nowrap">🗑 全結果リセット:</label>
+      <input type="date" id="reset-date" style="flex:1;min-width:140px;padding:.35rem .6rem;border:1px solid #d0d8e4;border-radius:8px;font-size:.85rem">
+      <button id="all-reset-btn" style="padding:.35rem .9rem;background:#c0392b;color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer">
+        全結果をリセット
+      </button>
+    </div>
+  </main>
+
+  <div class="sync-status" id="sync-status">
+    <span class="sync-dot"></span>
+    <span class="sync-label"></span>
+  </div>
+
+  {% set active_app = 'inspection' %}
+  {% include 'bottom_nav.html' %}
+
+  <script type="module">
+    import { initIndexPage } from "{{ url_for('static', filename='js/app.js') }}";
+    import { clearResultsForDate } from "{{ url_for('static', filename='js/db.js') }}";
+
+    // Service Worker 登録
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("{{ url_for('static', filename='sw.js') }}")
+        .catch(e => console.warn("SW登録失敗:", e));
+    }
+
+    initIndexPage();
+
+    /* ── 週ナビゲーション ─────────────────────────── */
+    const today = new Date();
+    let weekOffset = 0; // 0 = 今週, -1 = 先週, ...
+
+    function fmtISO(d) {
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    }
+
+    /** offset 週のの月〜金の Date オブジェクト配列を返す */
+    function getWeekDates(offset) {
+      const d = new Date(today);
+      const dow = d.getDay();
+      d.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1) + offset * 7);
+      return Array.from({ length: 5 }, (_, i) => {
+        const day = new Date(d);
+        day.setDate(d.getDate() + i);
+        return day;
+      });
+    }
+
+    function updateWeekNav() {
+      const dates  = getWeekDates(weekOffset);
+      const mon    = dates[0];
+      const fri    = dates[4];
+      const fmtShort = d => `${d.getMonth()+1}/${d.getDate()}`;
+      const isCurrentWeek = weekOffset === 0;
+
+      // ヘッダーラベル
+      const label = isCurrentWeek
+        ? `今週  ${fmtShort(mon)}〜${fmtShort(fri)}`
+        : `${mon.getFullYear()}年  ${fmtShort(mon)}〜${fmtShort(fri)}`;
+      document.getElementById("week-nav-label").textContent = label;
+
+      // 次週ボタン（今週以降は無効）
+      document.getElementById("week-next").disabled = weekOffset >= 0;
+
+      // 今日の曜日（1=月…5=金）
+      const todayDow = today.getDay() === 0 ? 7 : today.getDay();
+
+      // 曜日カードのリンクと見た目を更新
+      document.querySelectorAll(".day-card").forEach(card => {
+        const day     = parseInt(card.dataset.day);
+        const dateStr = fmtISO(dates[day - 1]);
+        card.href = `/inspect/${day}?date=${dateStr}`;
+        card.classList.remove("today", "past-week");
+        if (isCurrentWeek && day === todayDow) {
+          card.classList.add("today");
+        } else if (!isCurrentWeek) {
+          card.classList.add("past-week");
+        }
+      });
+    }
+
+    document.getElementById("week-prev").addEventListener("click", () => {
+      weekOffset--;
+      updateWeekNav();
+    });
+    document.getElementById("week-next").addEventListener("click", () => {
+      if (weekOffset < 0) { weekOffset++; updateWeekNav(); }
+    });
+
+    updateWeekNav(); // 初期表示
+
+    // Excel書き出し：日/週トグル + 日付ピッカー連動
+    const exportDateEl    = document.getElementById("export-date");
+    const exportLinkEl    = document.getElementById("export-link");
+    const modeDayBtn      = document.getElementById("export-mode-day");
+    const modeWeekBtn     = document.getElementById("export-mode-week");
+    const weekPreviewEl   = document.getElementById("week-range-preview");
+    const todayStr = today.toISOString().split("T")[0];
+    exportDateEl.value = todayStr;
+
+    let exportMode = "day"; // "day" | "week"
+
+    function getMonFri(dateStr) {
+      const d = new Date(dateStr + "T00:00:00");
+      const dow = d.getDay(); // 0=日
+      const monday = new Date(d);
+      monday.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
+      const friday = new Date(monday);
+      friday.setDate(monday.getDate() + 4);
+      const fmtISO = x =>
+        `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`;
+      const fmtJP = x => `${x.getMonth()+1}月${x.getDate()}日`;
+      return { mondayISO: fmtISO(monday), label: `${fmtJP(monday)}（月）〜 ${fmtJP(friday)}（金）` };
+    }
+
+    function updateExportLink() {
+      const date = exportDateEl.value;
+      if (!date) return;
+      if (exportMode === "day") {
+        exportLinkEl.href = `/api/export?date=${date}`;
+        weekPreviewEl.style.display = "none";
+      } else {
+        const { mondayISO, label } = getMonFri(date);
+        exportLinkEl.href = `/api/export/week?date=${mondayISO}`;
+        weekPreviewEl.textContent = `対象週: ${label}`;
+        weekPreviewEl.style.display = "block";
+      }
+    }
+
+    modeDayBtn.addEventListener("click", () => {
+      exportMode = "day";
+      modeDayBtn.style.background  = "#2c5f8a"; modeDayBtn.style.color  = "#fff";
+      modeWeekBtn.style.background = "#fff";     modeWeekBtn.style.color = "#2c5f8a";
+      updateExportLink();
+    });
+
+    modeWeekBtn.addEventListener("click", () => {
+      exportMode = "week";
+      modeWeekBtn.style.background = "#2c5f8a"; modeWeekBtn.style.color = "#fff";
+      modeDayBtn.style.background  = "#fff";    modeDayBtn.style.color  = "#2c5f8a";
+      updateExportLink();
+    });
+
+    exportDateEl.addEventListener("change", updateExportLink);
+    updateExportLink();
+
+    // 点検表Excelインポート
+    const importFileEl   = document.getElementById("import-file");
+    const importNameEl   = document.getElementById("import-filename");
+    const importBtnEl    = document.getElementById("import-btn");
+    const importResultEl = document.getElementById("import-result");
+
+    importFileEl.addEventListener("change", () => {
+      const file = importFileEl.files[0];
+      if (file) {
+        importNameEl.textContent = file.name;
+        importBtnEl.disabled = false;
+        importBtnEl.style.opacity = "1";
+      } else {
+        importNameEl.textContent = "（未選択）";
+        importBtnEl.disabled = true;
+        importBtnEl.style.opacity = ".5";
+      }
+      importResultEl.style.display = "none";
+    });
+
+    // 全結果リセット
+    const resetDateEl = document.getElementById("reset-date");
+    const allResetBtn = document.getElementById("all-reset-btn");
+    resetDateEl.value = todayStr;
+
+    allResetBtn.addEventListener("click", async () => {
+      const dateStr = resetDateEl.value;
+      if (!dateStr) { alert("日付を選択してください。"); return; }
+      if (!confirm(`${dateStr} の全曜日の点検結果をリセットします。\nこの操作は元に戻せません。よろしいですか？`)) return;
+
+      allResetBtn.disabled = true;
+      allResetBtn.textContent = "⏳ リセット中...";
+      try {
+        // IndexedDB（ローカル）をリセット
+        await clearResultsForDate(dateStr).catch(() => {});
+
+        // サーバーをリセット
+        const res = await fetch("/api/results/reset", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ date: dateStr })
+        });
+        if (res.ok) {
+          const json = await res.json();
+          alert(`${dateStr} の点検結果をリセットしました。（${json.deleted} 件削除）`);
+        } else {
+          alert("リセットに失敗しました。");
+        }
+      } catch (e) {
+        alert("通信エラー: " + e.message);
+      } finally {
+        allResetBtn.disabled = false;
+        allResetBtn.textContent = "全結果をリセット";
+      }
+    });
+
+    importBtnEl.addEventListener("click", async () => {
+      const file = importFileEl.files[0];
+      if (!file) return;
+
+      importBtnEl.disabled = true;
+      importBtnEl.textContent = "⏳ 処理中...";
+      importResultEl.style.display = "none";
+
+      const fd = new FormData();
+      fd.append("file", file);
+
+      try {
+        const res = await fetch("/api/import-excel", { method: "POST", body: fd });
+        const json = await res.json();
+
+        importResultEl.style.display = "block";
+        if (res.ok) {
+          importResultEl.style.background = "#e8f5e9";
+          importResultEl.style.color = "#1b5e20";
+          importResultEl.textContent = "✅ 完了\n\n" + (json.message || "");
+        } else {
+          importResultEl.style.background = "#fdecea";
+          importResultEl.style.color = "#b71c1c";
+          importResultEl.textContent = "❌ エラー\n\n" + (json.error || "不明なエラー");
+        }
+      } catch (e) {
+        importResultEl.style.display = "block";
+        importResultEl.style.background = "#fdecea";
+        importResultEl.style.color = "#b71c1c";
+        importResultEl.textContent = "❌ 通信エラー: " + e.message;
+      } finally {
+        importBtnEl.textContent = "▶ インポート実行";
+        importBtnEl.disabled = false;
+        importBtnEl.style.opacity = "1";
+      }
+    });
+  </script>
+</body>
+</html>
