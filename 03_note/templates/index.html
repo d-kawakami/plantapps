@@ -87,6 +87,32 @@
   .btn-speak.error { background: #fed7d7; color: #9b2335; border-color: #fc8181; font-size: 10px; padding: 4px 5px; }
   #speak-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a202c; color: #fff; padding: 8px 18px; border-radius: 6px; font-size: 13px; display: none; z-index: 9999; max-width: 90vw; word-break: break-all; line-height: 1.6; }
   #speak-toast a { color: #90cdf4; text-decoration: underline; }
+  /* 機器台帳検索ウィジェット */
+  .eq-widget { background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 6px; padding: 0; margin-bottom: 10px; overflow: hidden; }
+  .eq-widget summary { cursor: pointer; font-size: 12px; font-weight: 700; color: #2b6cb0; padding: 8px 14px; display: flex; align-items: center; gap: 6px; user-select: none; list-style: none; }
+  .eq-widget summary::-webkit-details-marker { display: none; }
+  .eq-widget summary::before { content: '▶'; font-size: 9px; transition: transform 0.15s; }
+  .eq-widget[open] summary::before { transform: rotate(90deg); }
+  .eq-widget-body { padding: 0 14px 12px; }
+  .eq-search-row { display: flex; gap: 6px; margin-bottom: 8px; }
+  .eq-search-input { flex: 1; padding: 6px 10px; border: 1px solid #bee3f8; border-radius: 4px; font-size: 13px; font-family: inherit; }
+  .eq-search-input:focus { outline: none; border-color: #63b3ed; box-shadow: 0 0 0 2px rgba(99,179,237,0.3); }
+  .eq-search-btn { padding: 6px 14px; background: #3182ce; color: #fff; border: none; border-radius: 4px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .eq-search-btn:active { background: #2b6cb0; }
+  .eq-result-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: #fff; border: 1px solid #bee3f8; border-radius: 5px; margin-bottom: 4px; text-decoration: none; color: #1a202c; font-size: 12px; transition: background 0.12s; }
+  .eq-result-item:hover { background: #dbeafe; }
+  .eq-result-name { font-weight: 700; min-width: 0; }
+  .eq-result-sub { color: #718096; font-size: 11px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .eq-badge { font-size: 10px; padding: 1px 6px; border-radius: 10px; white-space: nowrap; flex-shrink: 0; }
+  .eq-badge-active { background: #c6f6d5; color: #276749; }
+  .eq-badge-stop   { background: #fefcbf; color: #744210; }
+  .eq-badge-other  { background: #e2e8f0; color: #4a5568; }
+  .eq-arrow { color: #3182ce; font-size: 11px; flex-shrink: 0; margin-left: auto; }
+  .eq-msg { font-size: 12px; padding: 4px 2px; }
+  .eq-msg-loading { color: #718096; }
+  .eq-msg-empty   { color: #999; }
+  .eq-msg-error   { color: #c53030; }
+  .eq-hint { font-size: 11px; color: #4a90d9; padding: 2px 2px 6px; }
 </style>
 </head>
 <body>
@@ -143,6 +169,22 @@
   </div>
 </div>
 </form>
+
+<!-- 機器台帳検索ウィジェット -->
+<details class="eq-widget" id="eq-widget">
+  <summary>&#128269; 機器台帳で機器を検索</summary>
+  <div class="eq-widget-body">
+    <p class="eq-hint">機器名・設置場所などを入力して機器台帳を参照できます</p>
+    <div class="eq-search-row">
+      <input type="text" id="eq-input" class="eq-search-input"
+             placeholder="例: ポンプ、送風機、5号"
+             oninput="eqSearchDebounce()"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();eqSearch();}">
+      <button class="eq-search-btn" onclick="eqSearch()">検索</button>
+    </div>
+    <div id="eq-results"></div>
+  </div>
+</details>
 
 {% if use_relevance_sort and expanded_terms_map %}
 <div class="synonym-hint">
@@ -378,6 +420,68 @@
         btn.disabled = false;
         showToast('通信エラー: ' + err.message, 8000, true);
       });
+  }
+
+  /* =====================================================
+     機器台帳検索ウィジェット
+     ===================================================== */
+  var _eqTimer = null;
+
+  function eqSearchDebounce() {
+    clearTimeout(_eqTimer);
+    _eqTimer = setTimeout(eqSearch, 400);
+  }
+
+  function eqSearch() {
+    clearTimeout(_eqTimer);
+    var q = document.getElementById('eq-input').value.trim();
+    var resultsEl = document.getElementById('eq-results');
+    if (!q) { resultsEl.innerHTML = ''; return; }
+
+    var h = window.location.hostname;
+    var url = window.location.protocol + '//' + h + ':5002/api/equipment/search'
+              + '?name=' + encodeURIComponent(q) + '&limit=8';
+
+    resultsEl.innerHTML = '<div class="eq-msg eq-msg-loading">&#8987; 検索中...</div>';
+
+    fetch(url)
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(json) {
+        if (!json.success || !json.data.items.length) {
+          resultsEl.innerHTML = '<div class="eq-msg eq-msg-empty">「' + _esc(q) + '」に該当する機器が見つかりませんでした</div>';
+          return;
+        }
+        var base = window.location.protocol + '//' + h + ':5002';
+        var html = json.data.items.map(function(eq) {
+          var sc = eq.op_status === '稼働中' ? 'eq-badge-active'
+                 : eq.op_status === '停止'   ? 'eq-badge-stop' : 'eq-badge-other';
+          return '<a href="' + base + '/equipment/' + eq.id + '" target="_blank" class="eq-result-item">'
+            + '<span class="eq-result-name">' + _esc(eq.equipment_name) + '</span>'
+            + '<span class="eq-result-sub">' + _esc(eq.location || eq.facility_name || '') + '</span>'
+            + '<span class="eq-badge ' + sc + '">' + _esc(eq.op_status || '-') + '</span>'
+            + '<span class="eq-arrow">詳細&nbsp;&#x2197;</span>'
+            + '</a>';
+        }).join('');
+        resultsEl.innerHTML = html
+          + '<div class="eq-msg" style="color:#718096;margin-top:4px;">'
+          + json.data.total + ' 件中 ' + json.data.items.length + ' 件表示'
+          + (json.data.total > json.data.items.length
+              ? '　<a href="' + base + '/equipment?q=' + encodeURIComponent(q) + '" target="_blank" style="color:#3182ce;">すべて見る&nbsp;&#x2197;</a>'
+              : '')
+          + '</div>';
+      })
+      .catch(function() {
+        resultsEl.innerHTML = '<div class="eq-msg eq-msg-error">'
+          + '&#9888; 機器台帳アプリに接続できません（ポート 5002 で起動しているか確認してください）'
+          + '</div>';
+      });
+  }
+
+  function _esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 </script>
 
