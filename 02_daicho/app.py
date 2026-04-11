@@ -21,7 +21,7 @@ from database import init_db
 import models
 
 app = Flask(__name__)
-app.secret_key = "daicho-secret-2024"
+app.secret_key = "daicho-secret_key"
 
 # 共通テンプレートディレクトリを追加
 _common_tpl = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'common_templates'))
