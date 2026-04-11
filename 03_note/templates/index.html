@@ -387,9 +387,19 @@
           return;
         }
         btn.classList.remove('loading');
+        btn.disabled = false;
+
+        // Termux など、サーバー側で直接再生した場合
+        if (data.played) {
+          btn.classList.add('playing');
+          btn.textContent = '\u23F9';
+          showToast('デバイスで再生中: ' + data.text, 5000);
+          setTimeout(function() { resetSpeakBtn(btn); _currentSpeakBtn = null; }, 3000);
+          return;
+        }
+
         btn.classList.add('playing');
         btn.textContent = '\u23F9';
-        btn.disabled = false;
         showToast('読み上げ中: ' + data.text);
 
         _speakAudio.src = data.url;

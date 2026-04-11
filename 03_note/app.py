@@ -3,6 +3,8 @@ import sqlite3
 import openpyxl
 import json
 import hashlib
+import subprocess
+import tempfile
 import urllib.request
 import urllib.error
 import urllib.parse
@@ -140,6 +142,7 @@ def init_db():
 
 # デフォルト設定値
 SETTINGS_DEFAULTS = {
+    'tts_engine':        'voicevox',   # voicevox / windows_sapi / termux
     'voicevox_speaker':  str(VOICEVOX_SPEAKER),
     'read_date':      '1',
     'read_youbi':     '1',
@@ -329,6 +332,61 @@ def generate_voicevox_audio(text: str, out_path: str, speaker_id: int = None) ->
     os.makedirs(MEDIA_DIR, exist_ok=True)
     with open(out_path, 'wb') as f:
         f.write(audio_data)
+
+
+def generate_windows_sapi_audio(text: str, out_path: str) -> None:
+    """Windows 組み込み SAPI (PowerShell/System.Speech 経由) で WAV を生成する。
+    PowerShell は Windows 標準搭載のため追加インストール不要。
+    """
+    os.makedirs(MEDIA_DIR, exist_ok=True)
+
+    # テキストをテンポラリファイルに書き込む（PowerShell への文字列インジェクション防止）
+    with tempfile.NamedTemporaryFile(
+        mode='w', suffix='.txt', delete=False, encoding='utf-8'
+    ) as tf:
+        tf.write(text)
+        txt_path = tf.name
+
+    try:
+        safe_out = out_path.replace("'", "''")
+        safe_txt = txt_path.replace("'", "''")
+        script = (
+            "Add-Type -AssemblyName System.Speech; "
+            "$s = New-Object System.Speech.Synthesis.SpeechSynthesizer; "
+            f"$s.SetOutputToWaveFile('{safe_out}'); "
+            f"$text = [System.IO.File]::ReadAllText('{safe_txt}', [System.Text.Encoding]::UTF8); "
+            "$s.Speak($text); "
+            "$s.Dispose()"
+        )
+        result = subprocess.run(
+            ['powershell', '-NoProfile', '-NonInteractive', '-Command', script],
+            capture_output=True,
+            timeout=60,
+        )
+        if result.returncode != 0:
+            err = result.stderr.decode('utf-8', errors='replace').strip()
+            raise RuntimeError(f'Windows SAPI エラー: {err}')
+        if not os.path.exists(out_path):
+            raise RuntimeError('Windows SAPI: 音声ファイルが生成されませんでした。')
+    finally:
+        try:
+            os.unlink(txt_path)
+        except OSError:
+            pass
+
+
+def generate_termux_audio(text: str) -> None:
+    """Android (Termux) の termux-tts-speak でデバイスのスピーカーから直接再生する。
+    termux-api パッケージが必要: pkg install termux-api
+    """
+    result = subprocess.run(
+        ['termux-tts-speak', text],
+        capture_output=True,
+        timeout=120,
+    )
+    if result.returncode != 0:
+        err = result.stderr.decode('utf-8', errors='replace').strip()
+        raise RuntimeError(f'termux-tts-speak エラー: {err}')
 
 
 def fetch_voicevox_speakers() -> list:
@@ -572,7 +630,12 @@ def import_xlsx_route():
 
 @app.route('/speak/<int:rid>', methods=['POST'])
 def speak(rid):
-    """指定 ID の引継ぎレコードを TTS で読み上げ、音声 URL を返す。"""
+    """指定 ID の引継ぎレコードを TTS で読み上げ、音声 URL を返す。
+    tts_engine 設定により動作が変わる:
+      voicevox     → VOICEVOX で WAV 生成 → ブラウザ再生
+      windows_sapi → Windows SAPI で WAV 生成 → ブラウザ再生
+      termux       → termux-tts-speak でデバイス直接再生 → {'played': true}
+    """
     conn = get_db()
     row = conn.execute('SELECT * FROM notes WHERE id=?', (rid,)).fetchone()
     conn.close()
@@ -585,18 +648,36 @@ def speak(rid):
     if not speak_text.strip():
         return jsonify({'error': '読み上げ対象のフィールドがすべてオフになっています。設定を確認してください。'}), 400
 
+    tts_engine = cfg.get('tts_engine', 'voicevox')
+
+    # ---- Termux (Android デバイス直接再生) ----
+    if tts_engine == 'termux':
+        try:
+            generate_termux_audio(speak_text)
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        return jsonify({'played': True, 'text': speak_text})
+
+    # ---- WAV ファイルを生成してブラウザで再生 ----
     speaker_id = cfg.get('voicevox_speaker', str(VOICEVOX_SPEAKER))
-    cache_key = f'{speak_text}_voicevox_{speaker_id}'
+    if tts_engine == 'windows_sapi':
+        cache_key = f'{speak_text}_windows_sapi'
+    else:
+        cache_key = f'{speak_text}_voicevox_{speaker_id}'
+
     content_hash = hashlib.md5(cache_key.encode('utf-8')).hexdigest()[:8]
     filename = f'note_{rid}_{content_hash}.wav'
     out_path = os.path.join(MEDIA_DIR, filename)
 
     if not os.path.exists(out_path):
         try:
-            generate_voicevox_audio(
-                speak_text, out_path,
-                speaker_id=int(speaker_id),
-            )
+            if tts_engine == 'windows_sapi':
+                generate_windows_sapi_audio(speak_text, out_path)
+            else:
+                generate_voicevox_audio(
+                    speak_text, out_path,
+                    speaker_id=int(speaker_id),
+                )
         except urllib.error.HTTPError as e:
             body = e.read().decode('utf-8', errors='replace')
             return jsonify({'error': f'VOICEVOX API エラー ({e.code}): {body}'}), 502
@@ -616,6 +697,10 @@ def serve_media(filename):
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
     if request.method == 'POST':
+        # TTS エンジン
+        tts_engine = request.form.get('tts_engine', 'voicevox')
+        if tts_engine in ('voicevox', 'windows_sapi', 'termux'):
+            save_setting('tts_engine', tts_engine)
         # VOICEVOX スピーカー
         speaker = request.form.get('voicevox_speaker', '').strip()
         if speaker.isdigit():
