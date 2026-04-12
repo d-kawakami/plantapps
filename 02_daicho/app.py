@@ -17,7 +17,7 @@ from flask import (
 )
 from jinja2 import ChoiceLoader, FileSystemLoader
 
-from database import init_db
+from database import init_db, seed_sample_data
 import models
 
 app = Flask(__name__)
@@ -38,6 +38,9 @@ with app.app_context():
         if csv_path.exists():
             result = models.import_csv_file(str(csv_path))
             print(f"[INFO] kikilist.csv インポート完了: 成功={result['success']}, エラー={result['error_count']}")
+        else:
+            n = seed_sample_data()
+            print(f"[INFO] サンプルデータ投入完了: {n} 件")
 
 
 # ──────────────────────────────────────────────
