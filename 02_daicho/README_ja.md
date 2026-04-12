@@ -4,6 +4,8 @@
 
 [English version here](README.md)
 
+<a href="doc/images/02_daicho_dashboard.jpg"><img src="doc/images/02_daicho_dashboard.jpg" width="300" alt="機器台帳管理システム - ダッシュボード"></a>
+
 ## 機能
 
 - **機器一覧・検索** — 施設番号・施設名・大/中/小分類・稼働状況・製造所などで絞り込み。類義語による自然言語検索にも対応

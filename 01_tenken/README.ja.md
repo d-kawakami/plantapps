@@ -5,6 +5,8 @@
 Flask + PWA で構築した水処理施設向け日常点検記録システムです。
 オンライン・オフラインどちらの環境でも動作し、結果はサーバー（SQLite）とブラウザ（IndexedDB）の両方に保存されます。
 
+<a href="doc/images/01_tenken_top.JPG"><img src="doc/images/01_tenken_top.JPG" width="300" alt="日常点検アプリ - トップページ"></a>
+
 ---
 
 ## システム概要

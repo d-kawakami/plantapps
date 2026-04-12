@@ -5,6 +5,8 @@
 A daily inspection recording system for water treatment facilities, built with Flask + PWA.
 Works in both online and offline environments. Results are saved to both the server (SQLite) and the browser (IndexedDB).
 
+<a href="doc/images/01_tenken_top.JPG"><img src="doc/images/01_tenken_top.JPG" width="300" alt="Daily Inspection App - Top Page"></a>
+
 ---
 
 ## System Overview

@@ -4,6 +4,8 @@ A web application for centralized management of plant equipment information. Bui
 
 [日本語版はこちら / Japanese](README_ja.md)
 
+<a href="doc/images/02_daicho_dashboard.jpg"><img src="doc/images/02_daicho_dashboard.jpg" width="300" alt="Equipment Registry Management System - Dashboard"></a>
+
 ## Features
 
 - **Equipment List & Search** — Filter by facility number, facility name, major/middle/minor category, operating status, manufacturer, and more. Supports natural language search with synonyms.
