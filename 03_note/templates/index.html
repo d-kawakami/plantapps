@@ -32,18 +32,30 @@
   .table-wrap { width: 100%; overflow-x: auto; }
   table { width: 100%; table-layout: fixed; border-collapse: collapse; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; word-break: break-all; overflow-wrap: break-word; }
   /* 列幅定義 */
-  col.col-id     { width: 3.5em; }
-  col.col-date   { width: 5em; }
-  col.col-youbi  { width: 2.5em; }
-  col.col-kinmu  { width: 4em; }
-  col.col-shubetsu { width: 5.5em; }
-  col.col-jikoku { width: 5em; }
+  col.col-id     { width: 3em; }
+  col.col-date   { width: 3.8em; }
+  col.col-youbi  { width: 1.8em; }
+  col.col-kinmu  { width: 3em; }
+  col.col-shubetsu { width: 4em; }
+  col.col-jikoku { width: 3.5em; }
   col.col-naiyou { width: auto; }
-  col.col-kiny   { width: 6em; }
-  col.col-ops    { width: 4em; }
-  col.col-speak  { width: 2.8em; }
-  th { background: #2c5282; color: #fff; padding: 6px 8px; text-align: left; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  td { padding: 6px 8px; border-bottom: 1px solid #e8ecf0; vertical-align: top; font-size: 12px; }
+  col.col-kiny   { width: 5em; }
+  col.col-ops    { width: 3.5em; }
+  col.col-speak  { width: 2.4em; }
+  th { background: #2c5282; color: #fff; padding: 4px 4px; text-align: left; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  td { padding: 4px 4px; border-bottom: 1px solid #e8ecf0; vertical-align: top; font-size: 11px; }
+  /* スマホ：テーブルを120vwに拡張してスクロール可能に */
+  @media (max-width: 640px) {
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    #main-table { min-width: 120vw; width: 120vw; }
+    col.col-date   { width: 3.5em; }
+    col.col-youbi  { width: 1.6em; }
+    col.col-kinmu  { width: 2.6em; }
+    col.col-shubetsu { width: 3.6em; }
+    col.col-jikoku { width: 3.2em; }
+    col.col-ops    { width: 3em; }
+    col.col-kiny   { width: 4.5em; }
+  }
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: rgba(0,0,0,0.02); }
   /* 夜勤: 薄い青背景 */
