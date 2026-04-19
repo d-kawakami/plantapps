@@ -11,6 +11,8 @@ def get_db():
     """DB接続を返す。row_factoryでdict風アクセスを有効化"""
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
     return conn
 
 

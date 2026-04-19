@@ -11,6 +11,8 @@ DB_PATH = Path(__file__).parent / "tenken.db"
 
 def init_db():
     conn = sqlite3.connect(str(DB_PATH))
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
     cur = conn.cursor()
 
     # ─── テーブル作成 ────────────────────────────────────────
