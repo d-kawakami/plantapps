@@ -36,10 +36,10 @@ source ~/.bashrc
 1. Termux:Widget「start_tenken.sh」をタップ（または: tenken-start）
 2. ブラウザで http://localhost:5001 を開く
 3. 点検データを入力（オフライン可）
-4. 作業終了後、X260 AP（SSID: YourSSID）へ Wi-Fi 接続
+4. 作業終了後、サーバの AP（SSID は環境に合わせて設定）へ Wi-Fi 接続
 5. Termux:Widget「sync_tenken.sh」をタップ（または: tenken-sync）
 6. 通知「点検DB同期完了」を確認
-7. X260サーバの http://192.168.10.1/list でも確認可能
+7. サーバの管理画面（例: http://192.168.1.1/list）でも確認可能
 ```
 
 ---
@@ -53,8 +53,8 @@ nano ~/bin/sync_tenken.sh
 ```
 
 ```bash
-SERVER_IP=192.168.10.1   # X260 のIPアドレス
-SERVER_PORT=5400          # media-kanri のポート番号
+SERVER_IP=192.168.1.1   # サーバのIPアドレスに変更してください
+SERVER_PORT=5000         # サーバのポート番号に変更してください
 ```
 
 ---
@@ -63,8 +63,8 @@ SERVER_PORT=5400          # media-kanri のポート番号
 
 | 症状 | 確認方法 |
 |---|---|
-| DB同期が失敗する | `ping 192.168.10.1` でAP接続確認 |
-| サーバ側の状態確認 | `curl http://192.168.10.1:5400/api/tenken/status` |
+| DB同期が失敗する | `ping <SERVER_IP>` でAP接続確認 |
+| サーバ側の状態確認 | `curl http://<SERVER_IP>:<SERVER_PORT>/api/tenken/status` |
 | 同期ログ確認 | `cat ~/tenken_sync.log` |
 | アプリが起動しない | `cat ~/tenken.log` でエラー確認 |
 | PIDファイルが残っている | `rm ~/tenken.pid` してから再起動 |

@@ -1,6 +1,6 @@
 #!/data/data/com.termux/files/usr/bin/bash
-SERVER_IP=192.168.10.1
-SERVER_PORT=5400
+SERVER_IP=192.168.1.1   # サーバのIPアドレスに変更してください
+SERVER_PORT=5000        # サーバのポート番号に変更してください
 UPLOAD_URL=http://${SERVER_IP}:${SERVER_PORT}/api/tenken/upload
 STATUS_URL=http://${SERVER_IP}:${SERVER_PORT}/api/tenken/status
 DB_PATH=$HOME/plantapps/01_tenken/tenken.db
@@ -12,9 +12,9 @@ log() {
 
 log "=== DB同期開始 ==="
 
-# Step 1: X260 AP到達確認
+# Step 1: AP到達確認
 if ! ping -c 1 -W 2 "$SERVER_IP" > /dev/null 2>&1; then
-    log "エラー: $SERVER_IP に到達できません。X260 APへのWi-Fi接続を確認してください"
+    log "エラー: $SERVER_IP に到達できません。APへのWi-Fi接続を確認してください"
     exit 1
 fi
 log "サーバ到達確認OK: $SERVER_IP"
