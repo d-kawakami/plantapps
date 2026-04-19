@@ -31,6 +31,9 @@ instance/
 .env
 *.env
 
+# Sync settings (environment-specific)
+sync_config.json
+
 # OS
 .DS_Store
 Thumbs.db
