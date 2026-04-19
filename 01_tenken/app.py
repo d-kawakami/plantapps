@@ -78,11 +78,6 @@ def index():
     return render_template("index.html", day_buildings=_load_day_buildings())
 
 
-@app.route("/sync")
-def sync_page():
-    return render_template("sync.html")
-
-
 @app.route("/inspect/<int:day>")
 def inspect(day: int):
     if day not in range(1, 6):
