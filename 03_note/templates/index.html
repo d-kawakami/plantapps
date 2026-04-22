@@ -102,6 +102,27 @@
   /* 機器台帳検索ボタン */
   .btn-eq { background: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 4px; cursor: pointer; white-space: nowrap; }
   .btn-eq:hover { background: #bee3f8; }
+  /* ネットワークインポートモーダル */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: #fff; border-radius: 8px; padding: 20px 22px; width: min(94vw, 460px); max-height: 80vh; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.22); }
+  .modal-box h3 { font-size: 15px; color: #2c5282; margin: 0; }
+  .modal-url-row { display: flex; gap: 6px; }
+  .modal-url-row input { flex: 1; padding: 6px 9px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 12px; font-family: monospace; }
+  .modal-url-row button { padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-size: 12px; background: #3182ce; color: #fff; white-space: nowrap; }
+  .modal-url-row button:hover { background: #2b6cb0; }
+  .modal-hint { font-size: 11px; color: #718096; }
+  .modal-file-list { flex: 1; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 5px; min-height: 60px; }
+  .modal-file-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid #f0f0f0; font-size: 12px; gap: 8px; }
+  .modal-file-item:last-child { border-bottom: none; }
+  .modal-file-item:hover { background: #f7fafc; }
+  .modal-file-name { flex: 1; word-break: break-all; color: #2d3748; }
+  .modal-import-btn { padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 11px; background: #68d391; color: #1a202c; white-space: nowrap; }
+  .modal-import-btn:hover { background: #48bb78; }
+  .modal-msg { font-size: 12px; padding: 10px 12px; color: #718096; text-align: center; }
+  .modal-msg.error { color: #c53030; }
+  .modal-footer { display: flex; justify-content: flex-end; }
+  .modal-close-btn { padding: 5px 14px; border-radius: 4px; border: 1px solid #cbd5e0; background: #e2e8f0; color: #555; cursor: pointer; font-size: 12px; }
   /* 機器台帳検索結果パネル */
   .eq-widget { background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 6px; margin-bottom: 10px; overflow: hidden; display: none; }
   .eq-widget[open] { display: block; }
@@ -135,6 +156,7 @@
       <input type="file" id="xlsx_file" name="xlsx_file" accept=".xlsx" style="display:none;" onchange="if(this.files.length) this.form.submit();">
       <button type="button" class="btn" style="background:#68d391; color:#1a202c;" onclick="document.getElementById('xlsx_file').click();">XLSXインポート</button>
     </form>
+    <button type="button" class="btn" style="background:#4fd1c5; color:#1a202c;" onclick="openNetImport()">&#127760; ネットから</button>
     <a href="{{ url_for('settings') }}" class="btn" style="background:#4a5568; color:#fff;">&#9881; 設定</a>
   </div>
 </header>
@@ -302,6 +324,32 @@
 <!-- 読み上げ用トーストとオーディオ要素 -->
 <div id="speak-toast"></div>
 <audio id="speak-audio" style="display:none;"></audio>
+
+<!-- ネットワークXLSXインポートモーダル -->
+<div class="modal-overlay" id="net-import-modal" onclick="if(event.target===this)closeNetImport()">
+  <div class="modal-box">
+    <h3>&#127760; ネットワークからXLSXインポート</h3>
+    <div class="modal-url-row">
+      <input type="text" id="net-list-url" placeholder="http://192.168.2.1:5400/api/files" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button onclick="fetchNetFileList()">接続</button>
+    </div>
+    <div class="modal-hint">
+      リストURLにアクセスしてファイル一覧を取得します。<br>
+      media-kanri の場合は <code>http://サーバーIP:5400/api/files</code> を入力してください。
+    </div>
+    <div class="modal-file-list" id="net-file-list">
+      <div class="modal-msg">URLを入力して「接続」を押してください。</div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-close-btn" onclick="closeNetImport()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- ネットインポート送信用フォーム（非表示） -->
+<form id="net-import-form" method="post" action="{{ url_for('import_xlsx_from_net') }}" style="display:none;">
+  <input type="hidden" id="net-import-file-url" name="file_url" value="">
+</form>
 
 <script>
   (function() {
@@ -503,6 +551,91 @@
 
   function _esc(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* =====================================================
+     ネットワークXLSXインポート
+     ===================================================== */
+  var NET_IMPORT_LS_KEY = 'netImportListUrl';
+
+  function openNetImport() {
+    var modal = document.getElementById('net-import-modal');
+    var urlInput = document.getElementById('net-list-url');
+    urlInput.value = localStorage.getItem(NET_IMPORT_LS_KEY) || '';
+    modal.classList.add('open');
+  }
+
+  function closeNetImport() {
+    document.getElementById('net-import-modal').classList.remove('open');
+  }
+
+  function fetchNetFileList() {
+    var urlInput = document.getElementById('net-list-url');
+    var listEl   = document.getElementById('net-file-list');
+    var listUrl  = urlInput.value.trim();
+
+    if (!listUrl) {
+      listEl.innerHTML = '<div class="modal-msg error">URLを入力してください。</div>';
+      return;
+    }
+
+    // http:// がなければ補完
+    if (!/^https?:\/\//i.test(listUrl)) {
+      listUrl = 'http://' + listUrl;
+      urlInput.value = listUrl;
+    }
+
+    localStorage.setItem(NET_IMPORT_LS_KEY, listUrl);
+    listEl.innerHTML = '<div class="modal-msg">&#8987; 接続中...</div>';
+
+    fetch('/api/net_xlsx/list?url=' + encodeURIComponent(listUrl))
+      .then(function(r) { return r.json(); })
+      .then(function(json) {
+        if (!json.ok) {
+          listEl.innerHTML = '<div class="modal-msg error">&#9888; ' + _esc(json.error || '不明なエラー') + '</div>';
+          return;
+        }
+        var files = json.files;
+        if (!files || !files.length) {
+          listEl.innerHTML = '<div class="modal-msg">.xlsxファイルが見つかりませんでした。</div>';
+          return;
+        }
+
+        // ベースURLを算出（/list などのパスを除く）
+        var baseUrl = listUrl.replace(/\/[^\/]*$/, '');
+
+        var html = files.map(function(item) {
+          var name, fileUrl;
+          if (typeof item === 'string') {
+            name    = item;
+            fileUrl = baseUrl + '/' + encodeURIComponent(item);
+          } else {
+            name    = item.name || item.filename || String(item);
+            fileUrl = item.url || (baseUrl + '/' + encodeURIComponent(name));
+          }
+          // .xlsx のみ表示
+          if (!/\.xlsx$/i.test(name)) return '';
+          return '<div class="modal-file-item">'
+            + '<span class="modal-file-name">' + _esc(name) + '</span>'
+            + '<button class="modal-import-btn" data-url="' + _esc(fileUrl) + '" onclick="doNetImport(this.dataset.url)">インポート</button>'
+            + '</div>';
+        }).join('');
+
+        if (!html) {
+          listEl.innerHTML = '<div class="modal-msg">.xlsxファイルが見つかりませんでした。</div>';
+        } else {
+          listEl.innerHTML = html;
+        }
+      })
+      .catch(function(err) {
+        listEl.innerHTML = '<div class="modal-msg error">&#9888; 通信エラー: ' + _esc(err.message) + '</div>';
+      });
+  }
+
+  function doNetImport(fileUrl) {
+    if (!confirm('「' + fileUrl + '」からインポートしますか？')) return;
+    document.getElementById('net-import-file-url').value = fileUrl;
+    document.getElementById('net-import-form').submit();
   }
 </script>
 

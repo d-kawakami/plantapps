@@ -2,11 +2,12 @@
 DB初期化・シードデータ投入スクリプト
 使い方: python database.py
 """
+import os
 import sqlite3
 from pathlib import Path
 from seed_data import INSPECTION_ITEMS
 
-DB_PATH = Path(__file__).parent / "tenken.db"
+DB_PATH = Path(os.environ.get('TENKEN_DB_PATH', str(Path(__file__).parent / "tenken.db")))
 
 
 def init_db():

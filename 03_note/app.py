@@ -201,13 +201,15 @@ def save_setting(key: str, value: str) -> None:
 def import_xlsx(conn, xlsx_source=None):
     """
     Excel 列マッピング（3行目以降がデータ）:
-      A列[0] = 記入年月日（日付）
-      B列[1] = 曜日（数式、スキップ）
-      C列[2] = 勤務
-      D列[3] = 種別
-      E列[4] = 時刻
-      F列[5] = 内容
-      G列[6] = 記入者（省略可）
+      A列[0] = 空
+      B列[1] = 故障フラグ（スキップ）
+      C列[2] = 記入年月日（日付）
+      D列[3] = 曜日（数式、スキップ）
+      E列[4] = 勤務
+      F列[5] = 種別
+      G列[6] = 時刻
+      H列[7] = 内容
+      I列[8] = 記入者（省略可）
     """
     try:
         existing = set(
@@ -219,19 +221,19 @@ def import_xlsx(conn, xlsx_source=None):
         ws = wb.active
         rows_to_insert = []
         for row in ws.iter_rows(min_row=3, values_only=True):
-            # A列（日付）が空の行はスキップ
-            if not row[0]:
+            # C列（日付）が空の行はスキップ
+            if not row[2]:
                 continue
-            date_val = row[0]                                    # A列 = 日付
+            date_val = row[2]                                    # C列 = 日付
             if isinstance(date_val, datetime):
                 date_str = date_val.strftime('%Y-%m-%d')
             else:
                 date_str = str(date_val).strip()
-            kinmu     = str(row[2]).strip() if row[2] else ''   # C列 = 勤務
-            shubetsu  = str(row[3]).strip() if row[3] else ''   # D列 = 種別
-            jikoku    = str(row[4]).strip() if row[4] else ''   # E列 = 時刻
-            naiyou    = str(row[5]).strip() if row[5] else ''   # F列 = 内容
-            kinyugsha = str(row[6]).strip() if len(row) > 6 and row[6] else ''  # G列 = 記入者
+            kinmu     = str(row[4]).strip() if row[4] else ''   # E列 = 勤務
+            shubetsu  = str(row[5]).strip() if row[5] else ''   # F列 = 種別
+            jikoku    = str(row[6]).strip() if row[6] else ''   # G列 = 時刻
+            naiyou    = str(row[7]).strip() if row[7] else ''   # H列 = 内容
+            kinyugsha = str(row[8]).strip() if len(row) > 8 and row[8] else ''  # I列 = 記入者
             if (date_str, kinmu, jikoku, naiyou) not in existing:
                 rows_to_insert.append((date_str, kinmu, shubetsu, jikoku, naiyou, kinyugsha))
 
@@ -799,6 +801,78 @@ def clear_media():
                     pass
     flash(f'{deleted} 件の音声ファイルを削除しました。', 'success')
     return redirect(url_for('settings') + '#media')
+
+
+@app.route('/api/net_xlsx/list')
+def net_xlsx_list():
+    """指定URLのファイル一覧を取得してプロキシ返却する（CORS回避）。
+    期待するレスポンス形式:
+      ["file1.xlsx", "file2.xlsx"]
+      または
+      [{"name": "file1.xlsx", "url": "http://..."}, ...]
+    """
+    list_url = request.args.get('url', '').strip()
+    if not list_url:
+        return jsonify({'error': 'url パラメータが必要です。'}), 400
+    try:
+        req = urllib.request.Request(
+            list_url,
+            headers={'Accept': 'application/json', 'User-Agent': 'plantapps-note/1.0'},
+        )
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            raw = resp.read().decode('utf-8')
+        data = json.loads(raw)
+        if not isinstance(data, list):
+            return jsonify({'error': 'サーバーが配列を返しませんでした。'}), 502
+        return jsonify({'ok': True, 'files': data})
+    except urllib.error.URLError as e:
+        return jsonify({'error': f'接続エラー: {e.reason}'}), 502
+    except json.JSONDecodeError:
+        return jsonify({'error': 'レスポンスがJSONではありませんでした。'}), 502
+    except Exception as e:
+        return jsonify({'error': str(e)}), 502
+
+
+@app.route('/import_xlsx_from_net', methods=['POST'])
+def import_xlsx_from_net():
+    """ネットワーク上のXLSXをダウンロードしてインポートする。"""
+    import io
+    file_url = request.form.get('file_url', '').strip()
+    if not file_url:
+        flash('ファイルURLが指定されていません。', 'error')
+        return redirect(url_for('index'))
+    try:
+        parsed = urllib.parse.urlsplit(file_url)
+        encoded_url = urllib.parse.urlunsplit((
+            parsed.scheme, parsed.netloc,
+            urllib.parse.quote(parsed.path, safe='/'),
+            parsed.query, parsed.fragment
+        ))
+        req = urllib.request.Request(
+            encoded_url,
+            headers={'User-Agent': 'plantapps-note/1.0'},
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = resp.read()
+    except urllib.error.URLError as e:
+        flash(f'ダウンロードエラー: {e.reason}', 'error')
+        return redirect(url_for('index'))
+    except Exception as e:
+        flash(f'ダウンロードに失敗しました: {e}', 'error')
+        return redirect(url_for('index'))
+
+    if not data:
+        flash('ダウンロードしたファイルが空です。', 'error')
+        return redirect(url_for('index'))
+
+    conn = get_db()
+    added = import_xlsx(conn, io.BytesIO(data))
+    conn.close()
+    if added:
+        flash(f'{added} 件の新規レコードをインポートしました。', 'success')
+    else:
+        flash('新規レコードはありませんでした（重複チェック済み）。', 'success')
+    return redirect(url_for('index'))
 
 
 if __name__ == '__main__':

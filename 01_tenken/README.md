@@ -29,6 +29,7 @@ Works in both online and offline environments. Results are saved to both the ser
 - **Excel import** — Bulk-updates inspection items from a master Excel sheet
 - **Result reset** — Reset results per inspection page, or all results for a date from the top page
 - **Voice input** — Hands-free ○ / △ / × entry, item navigation, and memo input via Web Speech API
+- **DB sync** — Upload `tenken.db` to a server via the "🔄 DB sync" collapsible section at the bottom of the top page; server IP, port, and DB path are configurable and saved persistently
 
 ---
 
@@ -85,6 +86,9 @@ Works in both online and offline environments. Results are saved to both the ser
 | POST | `/api/results/reset` | Delete all results for a given date |
 | GET | `/api/export?date=` | Export results for a given date as Excel |
 | POST | `/api/import-excel` | Update inspection item master from Excel |
+| GET | `/api/sync/config` | Get current sync configuration |
+| POST | `/api/sync/config` | Save sync configuration (server IP/port/DB path) |
+| POST | `/api/sync/run` | Execute DB sync (SSE stream for real-time progress) |
 
 ---
 

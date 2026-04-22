@@ -28,7 +28,8 @@ def _load_names():
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
     buildings = list(data["buildings"].keys())
-    locations = [data["locations"][b] for b in buildings]
+    loc_map = data.get("locations", {})
+    locations = [loc_map.get(b, []) for b in buildings]
     return buildings, locations
 
 
@@ -36,10 +37,12 @@ _BUILDINGS, _LOCATIONS = _load_names()
 
 
 def _item(code, b_idx, l_idx, dow, wf, sort):
+    bldg_locs = _LOCATIONS[b_idx] if b_idx < len(_LOCATIONS) else []
+    loc = bldg_locs[l_idx] if l_idx < len(bldg_locs) else ""
     return {
         "code": code,
-        "building": _BUILDINGS[b_idx],
-        "location": _LOCATIONS[b_idx][l_idx],
+        "building": _BUILDINGS[b_idx] if b_idx < len(_BUILDINGS) else "",
+        "location": loc,
         "description": "",
         "day_of_week": dow,
         "week_filter": wf,

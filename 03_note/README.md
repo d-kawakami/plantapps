@@ -17,7 +17,7 @@ Built with Flask + SQLite; runs smoothly on low-spec devices such as Raspberry P
 | 引継ぎ記録の一覧・登録・編集・削除 | List, create, edit, and delete handover records |
 | 自然言語キーワード検索（同義語展開・関連度順・ハイライト） | Full-text keyword search with synonym expansion, relevance ranking, and highlighting |
 | 勤務区分・種別・日付範囲での絞り込み | Filter by shift, category, and date range |
-| Excel（.xlsx）からの一括インポート | Bulk import from Excel (.xlsx) |
+| Excel（.xlsx）からの一括インポート（ファイル選択 / ネットワーク経由） | Bulk import from Excel (.xlsx) via file picker or network |
 | **複数エンジン対応の日本語音声読み上げ**（VOICEVOX / Windows SAPI / Termux） | **Japanese TTS with multiple engine support** (VOICEVOX / Windows SAPI / Termux) |
 | 読み上げ設定ページ（エンジン切替・フィールド・ラベル ON/OFF・スピーカー変更） | TTS settings page (engine selection, field/label toggles, speaker selection) |
 | 音声キャッシュ管理（mediaフォルダ）| Audio cache management (media folder) |
@@ -240,20 +240,34 @@ Stores TTS settings as key-value pairs.
 
 ## Excel インポート / Excel Import
 
+### ファイル選択インポート / File Picker Import
+
 ヘッダー右上の「XLSXインポート」ボタンからファイルを選択すると即時インポートされます。  
 Click "XLSXインポート" in the header to import a file immediately.
+
+### ネットワーク経由インポート / Network Import
+
+ヘッダー右上の「🌐 ネットから」ボタンからネットワーク上のサーバーの xlsx を取り込めます。  
+Click "🌐 ネットから" to import xlsx files from a server on the network.
+
+[media-kanri](https://github.com/d-kawakami/media-kanri) と連携する場合は `http://サーバーIP:5400/api/files` を入力してください。  
+When using with media-kanri, enter `http://<server-ip>:5400/api/files`.
+
+### 列マッピング / Column Mapping
 
 | 項目 | 内容 |
 |------|------|
 | 対象シート | 先頭シート |
 | 読込開始行 | 3行目から |
-| A列 | 記入年月日（日付） |
-| B列 | 曜日（数式、スキップ） |
-| C列 | 勤務 |
-| D列 | 種別 |
-| E列 | 時刻 |
-| F列 | 内容 |
-| G列 | 記入者 |
+| A列 | 空欄 |
+| B列 | 故障フラグ（スキップ） |
+| C列 | 記入年月日（日付） |
+| D列 | 曜日（数式、スキップ） |
+| E列 | 勤務 |
+| F列 | 種別 |
+| G列 | 時刻 |
+| H列 | 内容 |
+| I列 | 記入者 |
 | 重複チェック | (日付, 勤務, 時刻, 内容) の組み合わせで判定 |
 
 ---

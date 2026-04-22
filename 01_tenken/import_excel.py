@@ -60,11 +60,11 @@ FAULT_SHEET     = "故障リスト・機器運転替え"
 # ─── 建物名 → 曜日マッピング ──────────────────────────────────
 # building_day_map.json（gitignore対象・内部専用）があればそちらを優先して読み込む。
 # なければ building_day_map.default.json（匿名化テンプレート）を使用する。
-def _load_building_day_map() -> tuple[dict, list, set]:
+def _load_building_day_map() -> tuple[dict, list, set, dict]:
     """
     JSONファイルから建物マッピングを読み込む。
     Returns:
-        (buildings_dict, prefix_normalize_list, header_skip_words_set)
+        (buildings_dict, prefix_normalize_list, header_skip_words_set, building_week_dict)
     """
     _base = Path(__file__).parent
     for fname in ("building_day_map.json", "building_day_map.default.json"):
@@ -77,11 +77,12 @@ def _load_building_day_map() -> tuple[dict, list, set]:
                 data.get("buildings", {}),
                 data.get("prefix_normalize", []),
                 set(data.get("header_skip_words", [])),
+                data.get("building_week", {}),
             )
     print("警告: building_day_map.json も building_day_map.default.json も見つかりません。")
-    return {}, [], set()
+    return {}, [], set(), {}
 
-BUILDING_DAY_MAP, _NORMALIZE_PREFIXES, _HEADER_SKIP_WORDS = _load_building_day_map()
+BUILDING_DAY_MAP, _NORMALIZE_PREFIXES, _HEADER_SKIP_WORDS, _BUILDING_WEEK_MAP = _load_building_day_map()
 
 
 def extract_week_filter(building_name: str):
@@ -107,12 +108,17 @@ def normalize_building(raw_name: str) -> str:
 
 def get_day_of_week(building_raw: str) -> int:
     """建物名（生）から曜日番号を返す。不明なら -1"""
+    # 1. 生名で直接検索（週サフィックス付きのエントリに対応）
+    if building_raw in BUILDING_DAY_MAP:
+        return BUILDING_DAY_MAP[building_raw]
+    # 2. 正規化後の名前で検索
     normalized = normalize_building(building_raw)
     if normalized in BUILDING_DAY_MAP:
         return BUILDING_DAY_MAP[normalized]
-    # 前方一致フォールバック
+    # 3. 前方一致フォールバック（正規化後）
     for key, day in BUILDING_DAY_MAP.items():
-        if normalized.startswith(key) or key in normalized:
+        key_norm = normalize_building(key)
+        if normalized.startswith(key_norm) or key_norm in normalized:
             return day
     return -1
 
@@ -356,9 +362,16 @@ def collect_fault_data(wb) -> dict:
     return fault_map
 
 
+_BASE_SKIP_WORDS = frozenset({
+    '場所', '備考', '先発切替機器', '共通', 'A', 'B',
+})
+
+
 def is_building_header(name_val, code_val, dot_val) -> bool:
     """建物名ヘッダー行かどうかを判定"""
     if not isinstance(name_val, str) or not name_val.strip():
+        return False
+    if name_val.strip() in _BASE_SKIP_WORDS:
         return False
     if name_val.strip() in _HEADER_SKIP_WORDS:
         return False
@@ -449,7 +462,11 @@ def parse_sheet(ws) -> list:
             if is_building_header(floor_val, code_val, dot_val):
                 raw = str(floor_val).strip()
                 st["building"]    = raw
-                st["week_filter"] = extract_week_filter(raw)
+                week = extract_week_filter(raw)
+                if week is None:
+                    norm = normalize_building(raw)
+                    week = _BUILDING_WEEK_MAP.get(raw) or _BUILDING_WEEK_MAP.get(norm)
+                st["week_filter"] = week
                 st["floor"]       = None  # フロア引き継ぎリセット
                 st["last_loc"]    = None  # 建物が変わったらリセット
                 st["sort_order"]  = 0
@@ -519,6 +536,46 @@ def parse_sheet(ws) -> list:
     if code_detected_count:
         print(f"  注意: '・' なし・コードパターンで検出した行: {code_detected_count} 件")
     return items
+
+
+def scan_building_names(excel_path: str) -> list:
+    """Excelから全建物名（生の名前、出現順）を返す。エラー時は空リスト。
+    週サフィックス（第N週）を保持したまま返すことで、水曜日の各週バリアントを
+    正確に識別できるようにする。"""
+    path = Path(excel_path)
+    try:
+        wb = openpyxl.load_workbook(str(path), data_only=True, keep_vba=True)
+        if SHEET_NAME not in wb.sheetnames:
+            wb.close()
+            return []
+        ws = wb[SHEET_NAME]
+        all_rows = [list(row) for row in ws.iter_rows(values_only=True)]
+        dot_cols = detect_dot_columns(all_rows)
+        seen_set: set = set()
+        seen_order: list = []
+        for row in all_rows:
+            for dc in dot_cols:
+                floor_idx = dc - 3
+                code_idx  = dc - 1
+                dot_idx   = dc
+                floor_val = row[floor_idx] if 0 <= floor_idx < len(row) else None
+                code_val  = row[code_idx]  if 0 <= code_idx  < len(row) else None
+                dot_val   = row[dot_idx]   if 0 <= dot_idx   < len(row) else None
+                if is_building_header(floor_val, code_val, dot_val):
+                    raw = str(floor_val).strip()  # 週サフィックスを含む生名を使用
+                    if raw not in seen_set:
+                        seen_set.add(raw)
+                        seen_order.append(raw)
+        wb.close()
+        return seen_order
+    except Exception:
+        return []
+
+
+def reload_building_map():
+    """building_day_map.json 更新後にグローバル変数を再ロードする"""
+    global BUILDING_DAY_MAP, _NORMALIZE_PREFIXES, _HEADER_SKIP_WORDS, _BUILDING_WEEK_MAP
+    BUILDING_DAY_MAP, _NORMALIZE_PREFIXES, _HEADER_SKIP_WORDS, _BUILDING_WEEK_MAP = _load_building_day_map()
 
 
 def import_from_excel(excel_path: str, no_confirm: bool = False):

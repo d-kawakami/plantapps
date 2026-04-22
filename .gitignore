@@ -31,6 +31,12 @@ instance/
 .env
 *.env
 
+# Sync settings (environment-specific)
+sync_config.json
+
+# Building-day map (contains facility-specific data, use *.default.json as template)
+building_day_map.json
+
 # OS
 .DS_Store
 Thumbs.db

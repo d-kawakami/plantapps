@@ -6,3 +6,7 @@ __pycache__/
 
 # 施設名マッピング（内部専用・非公開）
 building_day_map.json
+
+*.xlsx
+*.xlsm
+
