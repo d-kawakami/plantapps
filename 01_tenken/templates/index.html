@@ -81,6 +81,9 @@
           <button id="import-btn" disabled style="padding:.35rem .9rem;background:#2c5f8a;color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;opacity:.5">
             ▶ インポート実行
           </button>
+          <button onclick="openNetImport()" style="padding:.35rem .9rem;background:#4fd1c5;color:#1a202c;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer">
+            🌐 ネットから
+          </button>
         </div>
         <div id="import-result" style="display:none;margin-top:.75rem;padding:.6rem .8rem;border-radius:6px;font-size:.8rem;font-family:monospace;white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto"></div>
       </div>
@@ -515,6 +518,277 @@
     });
 
     loadSyncConfig();
+
+    // ── ネットワークXLSXインポート ──────────────────────────────
+    var NET_IMPORT_LS_KEY = 'tenkenNetImportListUrl';
+
+    function _esc(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    window.openNetImport = function openNetImport() {
+      var modal = document.getElementById('net-import-modal');
+      var urlInput = document.getElementById('net-list-url');
+      urlInput.value = localStorage.getItem(NET_IMPORT_LS_KEY) || '';
+      modal.classList.add('open');
+    }
+
+    window.closeNetImport = function closeNetImport() {
+      document.getElementById('net-import-modal').classList.remove('open');
+    }
+
+    window.fetchNetFileList = function fetchNetFileList() {
+      var urlInput = document.getElementById('net-list-url');
+      var listEl   = document.getElementById('net-file-list');
+      var listUrl  = urlInput.value.trim();
+
+      if (!listUrl) {
+        listEl.innerHTML = '<div class="ni-msg error">URLを入力してください。</div>';
+        return;
+      }
+
+      if (!/^https?:\/\//i.test(listUrl)) {
+        listUrl = 'http://' + listUrl;
+        urlInput.value = listUrl;
+      }
+
+      localStorage.setItem(NET_IMPORT_LS_KEY, listUrl);
+      listEl.innerHTML = '<div class="ni-msg">⌛ 接続中...</div>';
+
+      fetch('/api/net_xlsx/list?url=' + encodeURIComponent(listUrl))
+        .then(function(r) { return r.json(); })
+        .then(function(json) {
+          if (!json.ok) {
+            listEl.innerHTML = '<div class="ni-msg error">⚠ ' + _esc(json.error || '不明なエラー') + '</div>';
+            return;
+          }
+          var files = json.files;
+          if (!files || !files.length) {
+            listEl.innerHTML = '<div class="ni-msg">.xlsx / .xlsmファイルが見つかりませんでした。</div>';
+            return;
+          }
+
+          var baseUrl = listUrl.replace(/\/[^\/]*$/, '');
+
+          var html = files.map(function(item) {
+            var name, fileUrl;
+            if (typeof item === 'string') {
+              name    = item;
+              fileUrl = baseUrl + '/' + encodeURIComponent(item);
+            } else {
+              name    = item.name || item.filename || String(item);
+              fileUrl = item.url || (baseUrl + '/' + encodeURIComponent(name));
+            }
+            if (!/\.(xlsx|xlsm)$/i.test(name)) return '';
+            return '<div class="ni-file-item">'
+              + '<span class="ni-file-name">' + _esc(name) + '</span>'
+              + '<button class="ni-import-btn" data-url="' + _esc(fileUrl) + '" onclick="doNetImport(this.dataset.url)">インポート</button>'
+              + '</div>';
+          }).join('');
+
+          if (!html) {
+            listEl.innerHTML = '<div class="ni-msg">.xlsx / .xlsmファイルが見つかりませんでした。</div>';
+          } else {
+            listEl.innerHTML = html;
+          }
+        })
+        .catch(function(err) {
+          listEl.innerHTML = '<div class="ni-msg error">⚠ 通信エラー: ' + _esc(err.message) + '</div>';
+        });
+    }
+
+    var _netImportResultEl = null;
+    var _pendingScanId = null;
+    var DAY_NAMES = ['', '月', '火', '水', '木', '金', '土', '日'];
+
+    function _showImportResult(ok, text) {
+      var el = _netImportResultEl || document.getElementById('import-result');
+      el.style.display = 'block';
+      if (ok) {
+        el.style.background = '#e8f5e9'; el.style.color = '#1b5e20';
+        el.textContent = '✅ 完了\n\n' + text;
+      } else {
+        el.style.background = '#fdecea'; el.style.color = '#b71c1c';
+        el.textContent = '❌ エラー\n\n' + text;
+      }
+    }
+
+    function _commitImport(buildingDays) {
+      var resultEl = _netImportResultEl || document.getElementById('import-result');
+      resultEl.style.display = 'block';
+      resultEl.style.background = '#e8eef4';
+      resultEl.style.color = '#2c5f8a';
+      resultEl.textContent = '⌛ インポート中...';
+
+      fetch('/api/net-import/commit', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({scan_id: _pendingScanId, building_days: buildingDays || null})
+      })
+        .then(function(r) { return r.json().then(function(j) { return {ok: r.ok, json: j}; }); })
+        .then(function(res) {
+          _showImportResult(res.ok, res.ok ? (res.json.message || '') : (res.json.error || '不明なエラー'));
+        })
+        .catch(function(e) { _showImportResult(false, '通信エラー: ' + e.message); });
+    }
+
+    window.doNetImport = function doNetImport(fileUrl) {
+      if (!confirm('「' + fileUrl + '」からインポートしますか？\n\n⚠ inspection_items テーブルが上書きされます。')) return;
+
+      _netImportResultEl = document.getElementById('import-result');
+      _netImportResultEl.style.display = 'block';
+      _netImportResultEl.style.background = '#e8eef4';
+      _netImportResultEl.style.color = '#2c5f8a';
+      _netImportResultEl.textContent = '⌛ ダウンロード中...';
+      closeNetImport();
+
+      fetch('/api/net-import/scan', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({file_url: fileUrl})
+      })
+        .then(function(r) { return r.json().then(function(j) { return {ok: r.ok, json: j}; }); })
+        .then(function(res) {
+          if (!res.ok) { _showImportResult(false, res.json.error || '不明なエラー'); return; }
+          _pendingScanId = res.json.scan_id;
+          if (res.json.has_unknown) {
+            _openBldgAssignModal(res.json.buildings);
+          } else {
+            _commitImport(null);
+          }
+        })
+        .catch(function(e) { _showImportResult(false, '通信エラー: ' + e.message); });
+    };
+
+    // 週サフィックス「（第N週）」を除去してベース名を返す
+    function _baseName(name) {
+      return name.replace(/（第[1-4]週）/g, '').trim();
+    }
+
+    function _openBldgAssignModal(buildings) {
+      var unknown = buildings.filter(function(b) { return !b.day; });
+      var listEl = document.getElementById('bldg-assign-list');
+      var dayOpts = DAY_NAMES.slice(1, 6).map(function(n, i) {
+        return '<option value="' + (i+1) + '">' + n + '曜日</option>';
+      }).join('');
+
+      // 同じベース名（週サフィックス除去後）を持つものをグループ化
+      var groups = [];
+      var groupMap = {};
+      unknown.forEach(function(b) {
+        var base = _baseName(b.name);
+        if (!groupMap[base]) {
+          groupMap[base] = { baseName: base, items: [] };
+          groups.push(groupMap[base]);
+        }
+        groupMap[base].items.push(b);
+      });
+
+      listEl.innerHTML = groups.map(function(g) {
+        // 週バリアントを含むグループか（建物名に（第N週）がある場合）
+        var weekItems = g.items.filter(function(b) { return /（第[1-4]週）/.test(b.name); });
+        var dataNames = _esc(JSON.stringify(g.items.map(function(b) { return b.name; })));
+        var label;
+        if (weekItems.length > 0) {
+          // 週バリアント付きの建物：グループ名 + 週一覧を表示
+          var weekLabels = g.items.map(function(b) {
+            var m = b.name.match(/第([1-4])週/);
+            return m ? '第' + m[1] + '週' : b.name;
+          }).join('・');
+          label = _esc(g.baseName) + ' <span class="ni-week-hint">（' + _esc(weekLabels) + '）</span>';
+        } else {
+          label = _esc(g.items[0].name);
+        }
+        return '<div class="ni-file-item">'
+          + '<span class="ni-file-name">' + label + '</span>'
+          + '<select class="bldg-day-select" data-names="' + dataNames + '">'
+          + '<option value="">-- 選択 --</option>' + dayOpts
+          + '</select></div>';
+      }).join('');
+      document.getElementById('bldg-assign-modal').classList.add('open');
+    }
+
+    window.closeBldgAssign = function() {
+      document.getElementById('bldg-assign-modal').classList.remove('open');
+    };
+
+    window.submitBldgAssign = function() {
+      var buildingDays = {};
+      var valid = true;
+      document.querySelectorAll('.bldg-day-select').forEach(function(sel) {
+        if (!sel.value) { valid = false; return; }
+        var names = JSON.parse(sel.dataset.names);
+        names.forEach(function(name) {
+          buildingDays[name] = parseInt(sel.value);
+        });
+      });
+      if (!valid) { alert('すべての建物の曜日を選択してください。'); return; }
+      document.getElementById('bldg-assign-modal').classList.remove('open');
+      _commitImport(buildingDays);
+    };
   </script>
+
+<!-- ネットワークインポートモーダル -->
+<style>
+  .ni-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1000; align-items:center; justify-content:center; }
+  .ni-overlay.open { display:flex; }
+  .ni-box { background:#fff; border-radius:8px; padding:20px 22px; width:min(94vw,460px); max-height:80vh; display:flex; flex-direction:column; gap:12px; box-shadow:0 8px 32px rgba(0,0,0,.22); }
+  .ni-box h3 { font-size:15px; color:#2c5282; margin:0; }
+  .ni-url-row { display:flex; gap:6px; }
+  .ni-url-row input { flex:1; padding:6px 9px; border:1px solid #cbd5e0; border-radius:4px; font-size:12px; font-family:monospace; }
+  .ni-url-row button { padding:6px 12px; border-radius:4px; border:none; cursor:pointer; font-size:12px; background:#3182ce; color:#fff; white-space:nowrap; }
+  .ni-url-row button:hover { background:#2b6cb0; }
+  .ni-hint { font-size:11px; color:#718096; }
+  .ni-file-list { flex:1; overflow-y:auto; border:1px solid #e2e8f0; border-radius:5px; min-height:60px; }
+  .ni-file-item { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid #f0f0f0; font-size:12px; gap:8px; }
+  .ni-file-item:last-child { border-bottom:none; }
+  .ni-file-item:hover { background:#f7fafc; }
+  .ni-file-name { flex:1; word-break:break-all; color:#2d3748; }
+  .ni-import-btn { padding:4px 10px; border-radius:4px; border:none; cursor:pointer; font-size:11px; background:#68d391; color:#1a202c; white-space:nowrap; }
+  .ni-import-btn:hover { background:#48bb78; }
+  .ni-msg { font-size:12px; padding:10px 12px; color:#718096; text-align:center; }
+  .ni-msg.error { color:#c53030; }
+  .ni-footer { display:flex; justify-content:flex-end; gap:6px; }
+  .ni-close-btn { padding:5px 14px; border-radius:4px; border:1px solid #cbd5e0; background:#e2e8f0; color:#555; cursor:pointer; font-size:12px; }
+  .ni-ok-btn { padding:5px 14px; border-radius:4px; border:none; background:#3182ce; color:#fff; cursor:pointer; font-size:12px; font-weight:700; }
+  .ni-ok-btn:hover { background:#2b6cb0; }
+  .bldg-day-select { padding:3px 6px; border:1px solid #cbd5e0; border-radius:4px; font-size:11px; }
+  .ni-week-hint { font-size:10px; color:#718096; font-weight:normal; }
+</style>
+<div class="ni-overlay" id="net-import-modal" onclick="if(event.target===this)closeNetImport()">
+  <div class="ni-box">
+    <h3>🌐 ネットワークからExcelインポート</h3>
+    <div class="ni-url-row">
+      <input type="text" id="net-list-url" placeholder="http://192.168.x.x:5400/api/files" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button onclick="fetchNetFileList()">接続</button>
+    </div>
+    <div class="ni-hint">
+      リストURLにアクセスしてファイル一覧を取得します。<br>
+      media-kanri の場合は <code>http://サーバーIP:5400/api/files</code> を入力してください。
+    </div>
+    <div class="ni-file-list" id="net-file-list">
+      <div class="ni-msg">URLを入力して「接続」を押してください。</div>
+    </div>
+    <div class="ni-footer">
+      <button class="ni-close-btn" onclick="closeNetImport()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- 建物曜日設定モーダル（未登録建物が見つかった時に表示） -->
+<div class="ni-overlay" id="bldg-assign-modal">
+  <div class="ni-box">
+    <h3>🏗 新しい建物の曜日を設定</h3>
+    <div class="ni-hint">
+      building_day_map.json に未登録の建物が見つかりました。<br>
+      それぞれの点検曜日を選択してください。保存後にインポートを実行します。
+    </div>
+    <div class="ni-file-list" id="bldg-assign-list"></div>
+    <div class="ni-footer">
+      <button class="ni-close-btn" onclick="closeBldgAssign()">キャンセル</button>
+      <button class="ni-ok-btn" onclick="submitBldgAssign()">保存してインポート実行</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
