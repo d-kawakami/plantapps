@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>メディア管理 | Plant Media</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --surface: #ffffff;
+      --surface-2: #eef3f8;
+      --text: #172033;
+      --muted: #66758a;
+      --border: #d9e1ea;
+      --accent: #0f8aa8;
+      --accent-dark: #0a6f88;
+      --danger: #c43f4a;
+      --success: #227a4d;
+      --shadow: 0 10px 30px rgba(23, 32, 51, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", sans-serif;
+    }
+
+    button, input { font: inherit; }
+
+    .topbar {
+      height: 58px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 18px;
+      background: #0d1f3c;
+      color: #fff;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16);
+    }
+
+    .brand {
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+
+    .host {
+      color: #b8c5d6;
+      font-size: 13px;
+      margin-left: auto;
+      white-space: nowrap;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 18px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 58px;
+      z-index: 9;
+    }
+
+    .search {
+      flex: 1;
+      min-width: 160px;
+      height: 38px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0 12px;
+      background: #fbfdff;
+      color: var(--text);
+    }
+
+    .segmented {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--surface-2);
+      flex-shrink: 0;
+    }
+
+    .segmented button {
+      width: 42px;
+      height: 36px;
+      border: 0;
+      border-right: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .segmented button:last-child { border-right: 0; }
+    .segmented button.active { background: var(--accent); color: #fff; }
+
+    .upload-btn {
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .upload-btn:hover { background: var(--accent-dark); }
+    #fileInput, #cameraInput { display: none; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr) 340px;
+      min-height: calc(100vh - 116px);
+    }
+
+    .sidebar, .preview {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 18px;
+    }
+
+    .preview {
+      border-right: 0;
+      border-left: 1px solid var(--border);
+    }
+
+    .folder-title {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin: 0 0 12px;
+    }
+
+    .folder-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 40px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      background: #e7f5f8;
+      color: var(--accent-dark);
+      font-weight: 700;
+    }
+
+    .drop-zone {
+      margin-top: 18px;
+      min-height: 150px;
+      border: 2px dashed #a8b7c8;
+      border-radius: 8px;
+      background: #f9fbfd;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      text-align: center;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 18px;
+    }
+
+    .drop-zone.dragover {
+      background: #e7f5f8;
+      border-color: var(--accent);
+      color: var(--accent-dark);
+    }
+
+    .drop-zone strong { color: var(--text); }
+
+    .progress {
+      margin-top: 14px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--surface-2);
+      overflow: hidden;
+      display: none;
+    }
+
+    .progress span {
+      display: block;
+      width: 0;
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.2s;
+    }
+
+    .content {
+      padding: 18px;
+      min-width: 0;
+    }
+
+    .status-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+
+    .file-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+      gap: 12px;
+    }
+
+    .file-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(23, 32, 51, 0.05);
+      cursor: pointer;
+    }
+
+    .file-card.selected {
+      outline: 3px solid rgba(15, 138, 168, 0.28);
+      border-color: var(--accent);
+    }
+
+    .thumb {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      display: block;
+      background: var(--surface-2);
+    }
+
+    .file-tile-icon {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface-2);
+      color: var(--muted);
+    }
+
+    .file-meta {
+      padding: 9px;
+      min-height: 64px;
+    }
+
+    .file-name {
+      font-size: 13px;
+      font-weight: 700;
+      word-break: break-word;
+      line-height: 1.3;
+    }
+
+    .file-sub {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .file-list {
+      display: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--surface);
+    }
+
+    .file-row {
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr) 90px 130px;
+      align-items: center;
+      gap: 10px;
+      min-height: 48px;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+
+    .file-row:last-child { border-bottom: 0; }
+    .file-row.selected { background: #e7f5f8; }
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .preview-box {
+      background: #f9fbfd;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      min-height: 260px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+
+    .preview-box img, .preview-box video {
+      max-width: 100%;
+      max-height: 420px;
+      display: block;
+    }
+
+    .preview-empty {
+      color: var(--muted);
+      text-align: center;
+      padding: 24px;
+    }
+
+    .preview-name {
+      font-size: 16px;
+      font-weight: 800;
+      word-break: break-word;
+      margin-bottom: 8px;
+    }
+
+    .preview-detail {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+      margin-bottom: 14px;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .action {
+      min-height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 9px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .action.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .action.danger { color: var(--danger); }
+
+    .hidden { display: none !important; }
+
+    .empty-state {
+      min-height: 260px;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      text-align: center;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.55);
+    }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 220px minmax(0, 1fr); }
+      .preview { display: none; }
+    }
+
+    @media (max-width: 720px) {
+      .toolbar { flex-wrap: wrap; top: 58px; }
+      .search { flex-basis: 100%; }
+      .layout { display: block; }
+      .sidebar { border-right: 0; border-bottom: 1px solid var(--border); }
+      .drop-zone { min-height: 112px; }
+      .content { padding-bottom: 86px; }
+      .host { display: none; }
+      .file-row { grid-template-columns: 34px minmax(0, 1fr); }
+      .file-row .size, .file-row .modified { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">PLANT MEDIA</div>
+    <div class="host">http://{{ ip_address }}:5004/media</div>
+  </header>
+
+  <section class="toolbar" aria-label="ファイル操作">
+    <input id="searchInput" class="search" type="search" placeholder="ファイル名で検索">
+    <div class="segmented" aria-label="表示切替">
+      <button id="gridBtn" class="active" type="button" title="サムネイル表示" aria-label="サムネイル表示">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      </button>
+      <button id="listBtn" type="button" title="詳細表示" aria-label="詳細表示">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      </button>
+    </div>
+    <label class="upload-btn" for="cameraInput">
+      <span>カメラ</span>
+    </label>
+    <input id="cameraInput" type="file" accept="image/*" capture="camera" multiple>
+    <label class="upload-btn" for="fileInput">
+      <span>アップロード</span>
+    </label>
+    <input id="fileInput" type="file" multiple>
+  </section>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <p class="folder-title">フォルダー</p>
+      <div class="folder-row">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7l-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/></svg>
+        uploads
+      </div>
+      <div id="dropZone" class="drop-zone">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <strong>ここにドロップ</strong>
+        <span>複数ファイル対応</span>
+      </div>
+      <div id="progress" class="progress"><span></span></div>
+    </aside>
+
+    <section class="content">
+      <div class="status-line">
+        <span><span id="visibleCount">{{ files|length }}</span> / {{ files|length }} 件</span>
+        <span id="uploadStatus"></span>
+      </div>
+
+      {% if files %}
+      <div id="gridView" class="file-grid">
+        {% for file in files %}
+        <article class="file-card" tabindex="0" data-name="{{ file.name }}" data-kind="{{ file.kind }}" data-size="{{ file.size }}" data-modified="{{ file.modified }}">
+          {% if file.kind == 'image' %}
+          <img class="thumb" src="{{ url_for('send_media', filename=file.name) }}" alt="{{ file.name }}" loading="lazy">
+          {% elif file.kind == 'video' %}
+          <video class="thumb" src="{{ url_for('send_media', filename=file.name) }}" muted playsinline preload="metadata"></video>
+          {% else %}
+          <div class="file-tile-icon">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          {% endif %}
+          <div class="file-meta">
+            <div class="file-name">{{ file.name }}</div>
+            <div class="file-sub">{{ file.modified }}</div>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+
+      <div id="listView" class="file-list">
+        {% for file in files %}
+        <div class="file-row" tabindex="0" data-name="{{ file.name }}" data-kind="{{ file.kind }}" data-size="{{ file.size }}" data-modified="{{ file.modified }}">
+          <div>
+            {% if file.kind == 'image' %}
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            {% elif file.kind == 'video' %}
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><polygon points="10 9 15 12 10 15 10 9"/></svg>
+            {% else %}
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            {% endif %}
+          </div>
+          <div class="truncate">{{ file.name }}</div>
+          <div class="size">{{ file.size }} B</div>
+          <div class="modified">{{ file.modified }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">まだファイルがありません。左のドロップ領域かアップロードボタンから追加できます。</div>
+      {% endif %}
+    </section>
+
+    <aside class="preview">
+      <p class="folder-title">プレビュー</p>
+      <div id="previewBox" class="preview-box">
+        <div class="preview-empty">ファイルを選択してください</div>
+      </div>
+      <div id="previewInfo" class="hidden">
+        <div id="previewName" class="preview-name"></div>
+        <div id="previewDetail" class="preview-detail"></div>
+        <div class="actions">
+          <a id="downloadLink" class="action primary" href="#">ダウンロード</a>
+          <form id="deleteForm" action="{{ url_for('delete_photo') }}" method="post">
+            <input id="deleteName" type="hidden" name="photo">
+            <button class="action danger" type="submit">削除</button>
+          </form>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    const gridView = document.getElementById('gridView');
+    const listView = document.getElementById('listView');
+    const gridBtn = document.getElementById('gridBtn');
+    const listBtn = document.getElementById('listBtn');
+    const searchInput = document.getElementById('searchInput');
+    const visibleCount = document.getElementById('visibleCount');
+    const previewBox = document.getElementById('previewBox');
+    const previewInfo = document.getElementById('previewInfo');
+    const previewName = document.getElementById('previewName');
+    const previewDetail = document.getElementById('previewDetail');
+    const downloadLink = document.getElementById('downloadLink');
+    const deleteName = document.getElementById('deleteName');
+    const deleteForm = document.getElementById('deleteForm');
+    const fileInput = document.getElementById('fileInput');
+    const cameraInput = document.getElementById('cameraInput');
+    const dropZone = document.getElementById('dropZone');
+    const progress = document.getElementById('progress');
+    const progressBar = progress.querySelector('span');
+    const uploadStatus = document.getElementById('uploadStatus');
+
+    function mediaUrl(name) {
+      return `/media/file/${encodeURIComponent(name)}`;
+    }
+
+    function downloadUrl(name) {
+      return `/download/${encodeURIComponent(name)}`;
+    }
+
+    function allItems() {
+      return Array.from(document.querySelectorAll('[data-name]'));
+    }
+
+    function selectItem(item) {
+      allItems().forEach(el => el.classList.toggle('selected', el.dataset.name === item.dataset.name));
+      const name = item.dataset.name;
+      const kind = item.dataset.kind;
+      previewBox.innerHTML = '';
+
+      if (kind === 'image') {
+        const img = document.createElement('img');
+        img.src = mediaUrl(name);
+        img.alt = name;
+        previewBox.appendChild(img);
+      } else if (kind === 'video') {
+        const video = document.createElement('video');
+        video.src = mediaUrl(name);
+        video.controls = true;
+        video.playsInline = true;
+        previewBox.appendChild(video);
+      } else {
+        previewBox.innerHTML = '<div class="preview-empty">プレビュー非対応のファイルです</div>';
+      }
+
+      previewInfo.classList.remove('hidden');
+      previewName.textContent = name;
+      previewDetail.textContent = `${kind} / ${item.dataset.size} B / ${item.dataset.modified}`;
+      downloadLink.href = downloadUrl(name);
+      deleteName.value = name;
+    }
+
+    function bindSelection() {
+      allItems().forEach(item => {
+        item.addEventListener('click', () => selectItem(item));
+        item.addEventListener('keydown', event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            selectItem(item);
+          }
+        });
+      });
+      const first = document.querySelector('[data-name]:not(.hidden)');
+      if (first) selectItem(first);
+    }
+
+    function setView(view) {
+      const isGrid = view === 'grid';
+      if (gridView) gridView.style.display = isGrid ? 'grid' : 'none';
+      if (listView) listView.style.display = isGrid ? 'none' : 'block';
+      gridBtn.classList.toggle('active', isGrid);
+      listBtn.classList.toggle('active', !isGrid);
+      localStorage.setItem('plantMediaView', view);
+    }
+
+    function applySearch() {
+      const q = searchInput.value.trim().toLowerCase();
+      let shownNames = new Set();
+      allItems().forEach(item => {
+        const show = item.dataset.name.toLowerCase().includes(q);
+        item.classList.toggle('hidden', !show);
+        if (show) shownNames.add(item.dataset.name);
+      });
+      visibleCount.textContent = shownNames.size;
+    }
+
+    function uploadFiles(files) {
+      const items = Array.from(files);
+      if (items.length === 0) return;
+      progress.style.display = 'block';
+      progressBar.style.width = '0%';
+      uploadStatus.textContent = 'アップロード中...';
+
+      const formData = new FormData();
+      items.forEach(file => formData.append('image', file, file.name));
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/upload', true);
+      xhr.upload.onprogress = event => {
+        if (event.lengthComputable) {
+          progressBar.style.width = Math.round((event.loaded / event.total) * 100) + '%';
+        }
+      };
+      xhr.onload = () => {
+        progressBar.style.width = '100%';
+        if (xhr.status >= 200 && xhr.status < 300) {
+          uploadStatus.textContent = '完了しました';
+          window.location.reload();
+        } else {
+          uploadStatus.textContent = 'アップロードに失敗しました';
+        }
+      };
+      xhr.onerror = () => { uploadStatus.textContent = '通信エラー'; };
+      xhr.send(formData);
+    }
+
+    gridBtn.addEventListener('click', () => setView('grid'));
+    listBtn.addEventListener('click', () => setView('list'));
+    searchInput.addEventListener('input', applySearch);
+    fileInput.addEventListener('change', function () { uploadFiles(this.files); this.value = ''; });
+    cameraInput.addEventListener('change', function () { uploadFiles(this.files); this.value = ''; });
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', event => {
+      event.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', event => {
+      event.preventDefault();
+      dropZone.classList.remove('dragover');
+      uploadFiles(event.dataTransfer.files);
+    });
+    deleteForm.addEventListener('submit', event => {
+      if (!confirm('このファイルを削除しますか？')) event.preventDefault();
+    });
+
+    const initialQuery = new URLSearchParams(window.location.search).get('q');
+    if (initialQuery) {
+      searchInput.value = initialQuery;
+      applySearch();
+    }
+
+    bindSelection();
+    setView(localStorage.getItem('plantMediaView') || 'grid');
+  </script>
+
+  {% set active_app = 'photo' %}
+  {% include 'bottom_nav.html' %}
+</body>
+</html>

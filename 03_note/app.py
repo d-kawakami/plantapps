@@ -14,7 +14,7 @@ from datetime import datetime
 from markupsafe import Markup, escape as html_escape
 
 app = Flask(__name__)
-app.secret_key = 'note_secret_key'
+app.secret_key = os.environ.get('NOTE_SECRET_KEY') or os.urandom(24)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
