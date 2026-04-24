@@ -21,7 +21,7 @@ from database import init_db, seed_sample_data
 import models
 
 app = Flask(__name__)
-app.secret_key = "daicho-secret_key"
+app.secret_key = os.environ.get("DAICHO_SECRET_KEY") or os.urandom(24)
 
 # 共通テンプレートディレクトリを追加
 _common_tpl = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'common_templates'))

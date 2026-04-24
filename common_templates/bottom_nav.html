@@ -148,7 +148,7 @@
 (function () {
   var h = window.location.hostname;
   var PORTS = { handover: 5003, equipment: 5002, inspection: 5001, photo: 5004 };
-  var PATHS = { handover: '/',  equipment: '/',  inspection: '/',  photo: '/photo' };
+  var PATHS = { handover: '/',  equipment: '/',  inspection: '/',  photo: '/media' };
   var proto = window.location.protocol;  // http: or https:
   Object.keys(PORTS).forEach(function (key) {
     var el = document.getElementById('plant-nav-' + key);

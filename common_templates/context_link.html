@@ -73,7 +73,7 @@ function plantContextNav(el) {
   var url   = base + (path || '/');
   if (query) {
     url = base + '/equipment?q=' + encodeURIComponent(query);
-    if (app === 'photo') url = base + '/list?q=' + encodeURIComponent(query);
+    if (app === 'photo') url = base + '/media?q=' + encodeURIComponent(query);
   }
   window.location.href = url;
 }

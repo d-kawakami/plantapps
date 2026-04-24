@@ -84,7 +84,7 @@ await fetch(`http://${host}:5004/api/upload`, { method: 'POST', body: fd });
 pip install -r 01_tenken/requirements.txt
 pip install -r 02_daicho/requirements.txt
 pip install flask openpyxl          # 03_note
-pip install flask                   # 04_photo
+pip install flask                   # 04_media
 ```
 
 まとめてインストールする場合：
@@ -149,11 +149,11 @@ python app.py
 ### 04 写真管理（ポート 5004）
 
 ```bash
-cd 04_photo
+cd 04_media
 python app.py
 ```
 
-ブラウザで `http://localhost:5004/photo` を開く。
+ブラウザで `http://localhost:5004/media` を開く。
 
 ---
 
@@ -166,7 +166,7 @@ python app.py
 http://192.168.1.xxx:5001    ← 日常点検
 http://192.168.1.xxx:5002    ← 機器台帳
 http://192.168.1.xxx:5003    ← 引継ぎノート
-http://192.168.1.xxx:5004    ← 写真管理
+http://192.168.1.xxx:5004/media    ← 写真管理
 ```
 
 ボトムナビゲーションバーは `window.location.hostname` を自動取得して各タブのURLを構成するため、IPアドレスが変わっても設定変更不要です。
@@ -203,7 +203,7 @@ plantapps/
 │   ├── app.py              ← Flaskアプリ本体（ポート 5003）
 │   └── templates/
 │
-└── 04_photo/               ← 写真管理アプリ
+└── 04_media/               ← 写真管理アプリ
     ├── app.py              ← Flaskアプリ本体（ポート 5004）
     ├── uploads/            ← アップロードファイル保存先
     └── templates/
@@ -241,8 +241,8 @@ plantapps/
 ### 04 写真管理
 
 - スマートフォンからブラウザ経由またはドラッグ＆ドロップで写真・動画をアップロード
-- サムネイルグリッド表示とファイル名一覧表示
-- フルスクリーンビューア、ダウンロードボタン付き
+- エクスプローラー風の一体画面でアップロード、検索、プレビュー、ダウンロード、削除
+- サムネイル表示と詳細リスト表示を切り替え
 - **クロスアプリAPI**：`POST /api/upload`（CORS対応、点検アプリから現場写真を直接受信）
 
 ---

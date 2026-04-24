@@ -69,7 +69,7 @@ Install dependencies for each app:
 pip install -r 01_tenken/requirements.txt
 pip install -r 02_daicho/requirements.txt
 pip install flask openpyxl          # 03_note
-pip install flask                   # 04_photo
+pip install flask                   # 04_media
 ```
 
 Or install everything at once if you have a combined `requirements.txt`:
@@ -134,11 +134,11 @@ Open `http://localhost:5003` in your browser.
 ### 04 Photo Manager (port 5004)
 
 ```bash
-cd 04_photo
+cd 04_media
 python app.py
 ```
 
-Open `http://localhost:5004/photo` in your browser.
+Open `http://localhost:5004/media` in your browser.
 
 ---
 
@@ -151,7 +151,7 @@ Replace `localhost` with the server's IP address:
 http://192.168.1.xxx:5001    ← Daily Inspection
 http://192.168.1.xxx:5002    ← Equipment Register
 http://192.168.1.xxx:5003    ← Handover Notes
-http://192.168.1.xxx:5004    ← Photo Manager
+http://192.168.1.xxx:5004/media    ← Photo Manager
 ```
 
 The bottom navigation bar automatically detects the hostname and constructs the correct URLs for all tabs.
@@ -188,7 +188,7 @@ plantapps/
 │   ├── app.py              ← Flask app (port 5003)
 │   └── templates/
 │
-└── 04_photo/               ← Photo Manager app
+└── 04_media/               ← Photo Manager app
     ├── app.py              ← Flask app (port 5004)
     ├── uploads/            ← Uploaded files
     └── templates/

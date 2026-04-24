@@ -11,7 +11,7 @@ echo ""
 echo " 01 日常点検     http://localhost:5001"
 echo " 02 機器台帳     http://localhost:5002"
 echo " 03 引継ぎノート   http://localhost:5003"
-echo " 04 写真管理     http://localhost:5004"
+echo " 04 写真管理     http://localhost:5004/media"
 echo ""
 echo "停止: ./stop_all.sh または pkill -f app.py"
 echo "========================================"
@@ -22,7 +22,7 @@ cd "$SCRIPT_DIR/02_daicho" && python app.py &
 PID2=$!
 cd "$SCRIPT_DIR/03_note"   && python app.py &
 PID3=$!
-cd "$SCRIPT_DIR/04_photo"  && python app.py &
+cd "$SCRIPT_DIR/04_media"  && python app.py &
 PID4=$!
 
 echo ""
