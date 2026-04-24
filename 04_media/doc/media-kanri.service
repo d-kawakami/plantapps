@@ -1,0 +1,13 @@
+[Unit]
+Description=Media Kanri Flask App
+After=network.target
+
+[Service]
+User=www-data
+WorkingDirectory=/opt/media-kanri
+Environment="HOME=/opt/media-kanri"
+ExecStart=/opt/media-kanri/venv/bin/gunicorn -w 2 -b 0.0.0.0:5400 app:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
