@@ -1,0 +1,15 @@
+[Unit]
+Description=Plant Inspection App (X260 Server)
+After=network.target media-kanri.service
+
+[Service]
+User=www-data
+WorkingDirectory=/opt/plantapps/01_tenken
+Environment="HOME=/opt/plantapps"
+# media-kanri が受信した tenken.db を参照させる
+Environment="TENKEN_DB_PATH=/opt/media-kanri/tenken_db/tenken.db"
+ExecStart=/opt/plantapps/venv/bin/gunicorn -w 2 -b 0.0.0.0:5001 app:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
