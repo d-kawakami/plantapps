@@ -845,7 +845,7 @@ def import_xlsx_from_net():
         parsed = urllib.parse.urlsplit(file_url)
         encoded_url = urllib.parse.urlunsplit((
             parsed.scheme, parsed.netloc,
-            urllib.parse.quote(parsed.path, safe='/'),
+            urllib.parse.quote(urllib.parse.unquote(parsed.path), safe='/'),
             parsed.query, parsed.fragment
         ))
         req = urllib.request.Request(
