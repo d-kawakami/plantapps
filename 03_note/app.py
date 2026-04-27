@@ -853,6 +853,7 @@ def import_xlsx_from_net():
             headers={'User-Agent': 'plantapps-note/1.0'},
         )
         with urllib.request.urlopen(req, timeout=30) as resp:
+            content_type = resp.headers.get('Content-Type', '')
             data = resp.read()
     except urllib.error.URLError as e:
         flash(f'ダウンロードエラー: {e.reason}', 'error')
@@ -863,6 +864,14 @@ def import_xlsx_from_net():
 
     if not data:
         flash('ダウンロードしたファイルが空です。', 'error')
+        return redirect(url_for('index'))
+
+    if 'html' in content_type.lower():
+        flash(
+            'サーバーがXLSXではなくHTMLを返しました。'
+            'URLが正しいか、認証が必要でないか確認してください。',
+            'error',
+        )
         return redirect(url_for('index'))
 
     conn = get_db()
