@@ -210,13 +210,9 @@ def import_xlsx(conn, xlsx_source=None):
       G列[6] = 時刻
       H列[7] = 内容
       I列[8] = 記入者（省略可）
+    xlsxには常に全レコードが含まれるため、差分チェックは行わずDBを全置換する。
     """
     try:
-        existing = set(
-            (r['date'], r['kinmu'], r['jikoku'], r['naiyou'])
-            for r in conn.execute('SELECT date, kinmu, jikoku, naiyou FROM notes').fetchall()
-        )
-
         wb = openpyxl.load_workbook(xlsx_source or XLSX_PATH, data_only=True)
         ws = wb.active
         rows_to_insert = []
@@ -234,15 +230,15 @@ def import_xlsx(conn, xlsx_source=None):
             jikoku    = str(row[6]).strip() if row[6] else ''   # G列 = 時刻
             naiyou    = str(row[7]).strip() if row[7] else ''   # H列 = 内容
             kinyugsha = str(row[8]).strip() if len(row) > 8 and row[8] else ''  # I列 = 記入者
-            if (date_str, kinmu, jikoku, naiyou) not in existing:
-                rows_to_insert.append((date_str, kinmu, shubetsu, jikoku, naiyou, kinyugsha))
+            rows_to_insert.append((date_str, kinmu, shubetsu, jikoku, naiyou, kinyugsha))
 
+        conn.execute('DELETE FROM notes')
         conn.executemany(
             'INSERT INTO notes (date, kinmu, shubetsu, jikoku, naiyou, kinyugsha) VALUES (?,?,?,?,?,?)',
             rows_to_insert
         )
         conn.commit()
-        print(f'Imported {len(rows_to_insert)} new rows from xlsx.')
+        print(f'Imported {len(rows_to_insert)} rows from xlsx (full replace).')
         return len(rows_to_insert)
     except Exception as e:
         print(f'Import error: {e}')
@@ -639,9 +635,9 @@ def import_xlsx_route():
     added = import_xlsx(conn, f)
     conn.close()
     if added:
-        flash(f'{added} 件の新規レコードをインポートしました。', 'success')
+        flash(f'{added} 件のレコードでデータベースを更新しました。', 'success')
     else:
-        flash('新規レコードはありませんでした。', 'success')
+        flash('インポートできるレコードがありませんでした。', 'error')
     return redirect(url_for('index'))
 
 
@@ -869,9 +865,9 @@ def import_xlsx_from_net():
     added = import_xlsx(conn, io.BytesIO(data))
     conn.close()
     if added:
-        flash(f'{added} 件の新規レコードをインポートしました。', 'success')
+        flash(f'{added} 件のレコードでデータベースを更新しました。', 'success')
     else:
-        flash('新規レコードはありませんでした（重複チェック済み）。', 'success')
+        flash('インポートできるレコードがありませんでした。', 'error')
     return redirect(url_for('index'))
 
 
