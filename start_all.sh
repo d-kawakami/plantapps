@@ -22,8 +22,8 @@ cd "$SCRIPT_DIR/02_daicho" && python app.py &
 PID2=$!
 cd "$SCRIPT_DIR/03_note"   && python app.py &
 PID3=$!
-#cd "$SCRIPT_DIR/04_media"  && python app.py &
-#PID4=$!
+cd "$SCRIPT_DIR/04_media"  && python app.py &
+PID4=$!
 
 echo ""
 echo "PIDs: 01=$PID1  02=$PID2  03=$PID3  04=$PID4"
@@ -33,5 +33,4 @@ echo "モバイルからアクセスする場合は localhost を"
 echo "このサーバーのIPアドレスに置き換えてください。"
 
 # 全プロセスを待機（Ctrl+C で全停止）
-#wait $PID1 $PID2 $PID3 $PID4
-wait $PID1 $PID2 $PID3 
+wait $PID1 $PID2 $PID3 $PID4
