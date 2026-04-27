@@ -123,6 +123,17 @@
   .modal-msg.error { color: #c53030; }
   .modal-footer { display: flex; justify-content: flex-end; }
   .modal-close-btn { padding: 5px 14px; border-radius: 4px; border: 1px solid #cbd5e0; background: #e2e8f0; color: #555; cursor: pointer; font-size: 12px; }
+  .modal-tabs { display: flex; border-bottom: 2px solid #e2e8f0; margin-bottom: 4px; }
+  .modal-tab { padding: 7px 18px; font-size: 13px; cursor: pointer; border: none; background: none; color: #718096; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+  .modal-tab.active { color: #2c5282; font-weight: 700; border-bottom-color: #3182ce; }
+  .modal-tab-content { display: none; flex-direction: column; gap: 10px; }
+  .modal-tab-content.active { display: flex; }
+  .modal-local-drop { border: 2px dashed #cbd5e0; border-radius: 6px; padding: 28px 16px; text-align: center; color: #718096; font-size: 13px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+  .modal-local-drop:hover, .modal-local-drop.drag-over { border-color: #3182ce; background: #ebf8ff; color: #2c5282; }
+  .modal-local-selected { font-size: 12px; color: #276749; background: #c6f6d5; border-radius: 4px; padding: 6px 10px; display: none; word-break: break-all; }
+  .modal-local-submit { padding: 7px 18px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px; background: #68d391; color: #1a202c; font-weight: 600; align-self: flex-end; }
+  .modal-local-submit:hover { background: #48bb78; }
+  .modal-local-submit:disabled { background: #e2e8f0; color: #a0aec0; cursor: not-allowed; }
   /* 機器台帳検索結果パネル */
   .eq-widget { background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 6px; margin-bottom: 10px; overflow: hidden; display: none; }
   .eq-widget[open] { display: block; }
@@ -152,11 +163,7 @@
   <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
     <a href="{{ url_for('new') }}" class="btn btn-primary" >＋ 新規登録</a>
     <a href="{{ url_for('index', page=total_pages, q=q, kinmu=kinmu_filter, shubetsu=shubetsu_filter, date_from=date_from, date_to=date_to) }}" class="btn" style="background:#805ad5; color:#fff;">最終ページ &raquo;&raquo;</a>
-    <form method="post" action="{{ url_for('import_xlsx_route') }}" enctype="multipart/form-data" style="margin:0;" onsubmit="return !!document.getElementById('xlsx_file').files.length || (alert('ファイルを選択してください。'), false);">
-      <input type="file" id="xlsx_file" name="xlsx_file" accept=".xlsx" style="display:none;" onchange="if(this.files.length) this.form.submit();">
-      <button type="button" class="btn" style="background:#68d391; color:#1a202c;" onclick="document.getElementById('xlsx_file').click();">XLSXインポート</button>
-    </form>
-    <button type="button" class="btn" style="background:#4fd1c5; color:#1a202c;" onclick="openNetImport()">&#127760; ネットから</button>
+    <button type="button" class="btn" style="background:#68d391; color:#1a202c;" onclick="openImportModal()">&#8679; XLSXインポート</button>
     <a href="{{ url_for('settings') }}" class="btn" style="background:#4a5568; color:#fff;">&#9881; 設定</a>
   </div>
 </header>
@@ -325,23 +332,48 @@
 <div id="speak-toast"></div>
 <audio id="speak-audio" style="display:none;"></audio>
 
-<!-- ネットワークXLSXインポートモーダル -->
-<div class="modal-overlay" id="net-import-modal" onclick="if(event.target===this)closeNetImport()">
+<!-- XLSXインポートモーダル（ローカル / ネットワーク） -->
+<div class="modal-overlay" id="import-modal" onclick="if(event.target===this)closeImportModal()">
   <div class="modal-box">
-    <h3>&#127760; ネットワークからXLSXインポート</h3>
-    <div class="modal-url-row">
-      <input type="text" id="net-list-url" placeholder="http://192.168.2.1:5400/api/files" autocomplete="off" autocorrect="off" spellcheck="false">
-      <button onclick="fetchNetFileList()">接続</button>
+    <h3>&#8679; XLSXインポート</h3>
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="tab-local-btn" onclick="switchImportTab('local')">ローカル</button>
+      <button class="modal-tab" id="tab-net-btn" onclick="switchImportTab('net')">&#127760; ネットワーク</button>
     </div>
-    <div class="modal-hint">
-      リストURLにアクセスしてファイル一覧を取得します。<br>
-      media-kanri の場合は <code>http://サーバーIP:5400/api/files</code> を入力してください。
+
+    <!-- ローカルタブ -->
+    <div class="modal-tab-content active" id="tab-local">
+      <form id="local-import-form" method="post" action="{{ url_for('import_xlsx_route') }}" enctype="multipart/form-data">
+        <input type="file" id="xlsx_file" name="xlsx_file" accept=".xlsx" style="display:none;" onchange="onLocalFileSelected(this)">
+        <div class="modal-local-drop" id="local-drop-area"
+             onclick="document.getElementById('xlsx_file').click()"
+             ondragover="event.preventDefault();this.classList.add('drag-over')"
+             ondragleave="this.classList.remove('drag-over')"
+             ondrop="onLocalFileDrop(event)">
+          クリックまたはドラッグ&amp;ドロップで .xlsx を選択
+        </div>
+        <div class="modal-local-selected" id="local-file-info"></div>
+        <button type="button" class="modal-local-submit" id="local-import-btn" disabled onclick="submitLocalImport()">インポート</button>
+      </form>
     </div>
-    <div class="modal-file-list" id="net-file-list">
-      <div class="modal-msg">URLを入力して「接続」を押してください。</div>
+
+    <!-- ネットワークタブ -->
+    <div class="modal-tab-content" id="tab-net">
+      <div class="modal-url-row">
+        <input type="text" id="net-list-url" placeholder="http://192.168.2.1:5400/api/files" autocomplete="off" autocorrect="off" spellcheck="false">
+        <button onclick="fetchNetFileList()">接続</button>
+      </div>
+      <div class="modal-hint">
+        リストURLにアクセスしてファイル一覧を取得します。<br>
+        media-kanri の場合は <code>http://サーバーIP:5400/api/files</code> を入力してください。
+      </div>
+      <div class="modal-file-list" id="net-file-list">
+        <div class="modal-msg">URLを入力して「接続」を押してください。</div>
+      </div>
     </div>
+
     <div class="modal-footer">
-      <button class="modal-close-btn" onclick="closeNetImport()">閉じる</button>
+      <button class="modal-close-btn" onclick="closeImportModal()">閉じる</button>
     </div>
   </div>
 </div>
@@ -554,19 +586,63 @@
   }
 
   /* =====================================================
-     ネットワークXLSXインポート
+     XLSXインポートモーダル（ローカル / ネットワーク共通）
      ===================================================== */
   var NET_IMPORT_LS_KEY = 'netImportListUrl';
 
-  function openNetImport() {
-    var modal = document.getElementById('net-import-modal');
+  function openImportModal() {
     var urlInput = document.getElementById('net-list-url');
     urlInput.value = localStorage.getItem(NET_IMPORT_LS_KEY) || '';
-    modal.classList.add('open');
+    document.getElementById('import-modal').classList.add('open');
   }
 
-  function closeNetImport() {
-    document.getElementById('net-import-modal').classList.remove('open');
+  function closeImportModal() {
+    document.getElementById('import-modal').classList.remove('open');
+  }
+
+  function switchImportTab(tab) {
+    document.getElementById('tab-local').classList.toggle('active', tab === 'local');
+    document.getElementById('tab-net').classList.toggle('active', tab === 'net');
+    document.getElementById('tab-local-btn').classList.toggle('active', tab === 'local');
+    document.getElementById('tab-net-btn').classList.toggle('active', tab === 'net');
+  }
+
+  function onLocalFileSelected(input) {
+    var info = document.getElementById('local-file-info');
+    var btn  = document.getElementById('local-import-btn');
+    if (input.files && input.files.length) {
+      info.textContent = input.files[0].name;
+      info.style.display = 'block';
+      btn.disabled = false;
+    } else {
+      info.style.display = 'none';
+      btn.disabled = true;
+    }
+  }
+
+  function onLocalFileDrop(event) {
+    event.preventDefault();
+    document.getElementById('local-drop-area').classList.remove('drag-over');
+    var dt = event.dataTransfer;
+    if (!dt || !dt.files || !dt.files.length) return;
+    var file = dt.files[0];
+    if (!/\.xlsx$/i.test(file.name)) {
+      alert('.xlsx ファイルを選択してください。');
+      return;
+    }
+    var input = document.getElementById('xlsx_file');
+    var transfer = new DataTransfer();
+    transfer.items.add(file);
+    input.files = transfer.files;
+    onLocalFileSelected(input);
+  }
+
+  function submitLocalImport() {
+    if (!document.getElementById('xlsx_file').files.length) {
+      alert('ファイルを選択してください。');
+      return;
+    }
+    document.getElementById('local-import-form').submit();
   }
 
   function fetchNetFileList() {
@@ -579,7 +655,6 @@
       return;
     }
 
-    // http:// がなければ補完
     if (!/^https?:\/\//i.test(listUrl)) {
       listUrl = 'http://' + listUrl;
       urlInput.value = listUrl;
@@ -601,7 +676,6 @@
           return;
         }
 
-        // ベースURLを算出（/list などのパスを除く）
         var baseUrl = listUrl.replace(/\/[^\/]*$/, '');
 
         var html = files.map(function(item) {
@@ -613,7 +687,6 @@
             name    = item.name || item.filename || String(item);
             fileUrl = item.url || (baseUrl + '/' + encodeURIComponent(name));
           }
-          // .xlsx のみ表示
           if (!/\.xlsx$/i.test(name)) return '';
           return '<div class="modal-file-item">'
             + '<span class="modal-file-name">' + _esc(name) + '</span>'
