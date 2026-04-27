@@ -5,7 +5,7 @@
  * - Background Sync: オンライン復帰時に未同期データをサーバーへ送信
  */
 
-const CACHE_NAME    = "tenken-v1";
+const CACHE_NAME    = "tenken-v2";
 const SYNC_TAG      = "sync-results";
 
 const APP_SHELL = [
