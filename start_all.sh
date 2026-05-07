@@ -22,7 +22,7 @@ cd "$SCRIPT_DIR/02_daicho" && python app.py &
 PID2=$!
 cd "$SCRIPT_DIR/03_note"   && python app.py &
 PID3=$!
-cd "$SCRIPT_DIR/04_photo"  && python app.py &
+cd "$SCRIPT_DIR/04_media"  && python app.py &
 PID4=$!
 
 echo ""
