@@ -192,6 +192,32 @@ def delete_photo():
     return redirect(url_for("media"))
 
 
+@app.route("/api/delete", methods=["POST"])
+def api_delete():
+    """AJAX削除エンドポイント。JSON {"name": filename} を受け取りファイルを削除する。"""
+    data = request.get_json(silent=True) or {}
+    safe_name = sanitize_filename(data.get("name", ""))
+    if not safe_name:
+        return jsonify({"ok": False, "error": "ファイル名が指定されていません"}), 400
+    path = UPLOAD_FOLDER / safe_name
+    if not path.exists() or not path.is_file():
+        return jsonify({"ok": False, "error": f"{safe_name} が見つかりません"}), 404
+    try:
+        path.unlink()
+        return jsonify({"ok": True, "name": safe_name})
+    except PermissionError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route("/api/files")
+def api_files():
+    """ファイル一覧をJSON配列で返す（01_tenken ネットインポート連携用）。"""
+    return jsonify([
+        {"name": f["name"], "size": f["size"], "modified": f["modified"], "kind": f["kind"]}
+        for f in list_media_files()
+    ])
+
+
 @app.route("/api/upload", methods=["POST", "OPTIONS"])
 def api_upload():
     """他アプリからのメディア受信エンドポイント（CORS対応）。"""

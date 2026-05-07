@@ -280,7 +280,7 @@
 
     .file-row {
       display: grid;
-      grid-template-columns: 38px minmax(0, 1fr) 90px 130px;
+      grid-template-columns: 38px minmax(0, 1fr) 90px 130px 68px;
       align-items: center;
       gap: 10px;
       min-height: 48px;
@@ -288,6 +288,50 @@
       border-bottom: 1px solid var(--border);
       cursor: pointer;
     }
+
+    .card-actions {
+      display: flex;
+      border-top: 1px solid var(--border);
+    }
+    .card-act {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 7px 4px;
+      font-size: 11px;
+      font-weight: 700;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      text-decoration: none;
+      color: var(--accent);
+      transition: background 0.12s;
+    }
+    .card-act + .card-act { border-left: 1px solid var(--border); }
+    .card-act:hover { background: var(--surface-2); }
+    .card-act.danger { color: var(--danger); }
+    .card-act.danger:hover { background: #fdecea; }
+
+    .row-acts { display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
+    .row-act {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border: none;
+      background: transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      color: var(--accent);
+      transition: background 0.12s;
+    }
+    .row-act:hover { background: var(--surface-2); }
+    .row-act.danger { color: var(--danger); }
+    .row-act.danger:hover { background: #fdecea; }
 
     .file-row:last-child { border-bottom: 0; }
     .file-row.selected { background: #e7f5f8; }
@@ -384,7 +428,7 @@
       .drop-zone { min-height: 112px; }
       .content { padding-bottom: 86px; }
       .host { display: none; }
-      .file-row { grid-template-columns: 34px minmax(0, 1fr); }
+      .file-row { grid-template-columns: 34px minmax(0, 1fr) 68px; }
       .file-row .size, .file-row .modified { display: none; }
     }
   </style>
@@ -453,6 +497,16 @@
             <div class="file-name">{{ file.name }}</div>
             <div class="file-sub">{{ file.modified }}</div>
           </div>
+          <div class="card-actions">
+            <a class="card-act" data-filename="{{ file.name }}" href="#" title="ダウンロード">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3v13M6 13l6 7 6-7"/><line x1="4" y1="22" x2="20" y2="22"/></svg>
+              DL
+            </a>
+            <button class="card-act danger" data-filename="{{ file.name }}" type="button" title="削除">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+              削除
+            </button>
+          </div>
         </article>
         {% endfor %}
       </div>
@@ -472,6 +526,14 @@
           <div class="truncate">{{ file.name }}</div>
           <div class="size">{{ file.size }} B</div>
           <div class="modified">{{ file.modified }}</div>
+          <div class="row-acts">
+            <a class="row-act" data-filename="{{ file.name }}" href="#" title="ダウンロード">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3v13M6 13l6 7 6-7"/><line x1="4" y1="22" x2="20" y2="22"/></svg>
+            </a>
+            <button class="row-act danger" data-filename="{{ file.name }}" type="button" title="削除">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            </button>
+          </div>
         </div>
         {% endfor %}
       </div>
@@ -529,7 +591,44 @@
     }
 
     function allItems() {
-      return Array.from(document.querySelectorAll('[data-name]'));
+      return Array.from(document.querySelectorAll('.file-card[data-name], .file-row[data-name]'));
+    }
+
+    async function deleteFile(name) {
+      if (!confirm(`「${name}」を削除しますか？`)) return;
+      try {
+        const res = await fetch('/api/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        });
+        const json = await res.json();
+        if (!res.ok) { alert('削除に失敗しました: ' + (json.error || '')); return; }
+        document.querySelectorAll('.file-card[data-name], .file-row[data-name]').forEach(el => {
+          if (el.dataset.name === name) el.remove();
+        });
+        visibleCount.textContent = document.querySelectorAll('.file-card[data-name]:not(.hidden), .file-row[data-name]:not(.hidden)').length;
+        if (previewName.textContent === name) {
+          previewBox.innerHTML = '<div class="preview-empty">ファイルを選択してください</div>';
+          previewInfo.classList.add('hidden');
+        }
+      } catch (e) {
+        alert('通信エラー: ' + e.message);
+      }
+    }
+
+    function bindActions() {
+      document.querySelectorAll('a[data-filename]').forEach(a => {
+        a.href = `/download/${encodeURIComponent(a.dataset.filename)}`;
+        a.setAttribute('download', '');
+        a.addEventListener('click', e => e.stopPropagation());
+      });
+      document.querySelectorAll('button[data-filename]').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          deleteFile(btn.dataset.filename);
+        });
+      });
     }
 
     function selectItem(item) {
@@ -641,7 +740,8 @@
       uploadFiles(event.dataTransfer.files);
     });
     deleteForm.addEventListener('submit', event => {
-      if (!confirm('このファイルを削除しますか？')) event.preventDefault();
+      event.preventDefault();
+      deleteFile(deleteName.value);
     });
 
     const initialQuery = new URLSearchParams(window.location.search).get('q');
@@ -651,6 +751,7 @@
     }
 
     bindSelection();
+    bindActions();
     setView(localStorage.getItem('plantMediaView') || 'grid');
   </script>
 
