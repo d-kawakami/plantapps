@@ -7,14 +7,13 @@ import json
 import os
 import shutil
 import contextlib
-import subprocess
 import tempfile
 import uuid
 import urllib.request
 import urllib.parse
 from datetime import datetime
 from pathlib import Path
-from flask import Flask, render_template, request, jsonify, abort, send_file, Response
+from flask import Flask, render_template, request, jsonify, abort, send_file
 from jinja2 import ChoiceLoader, FileSystemLoader
 from database import init_db
 import models
@@ -27,21 +26,6 @@ app.jinja_loader = ChoiceLoader([
     FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')),
     FileSystemLoader(_common_tpl),
 ])
-
-# ─── 同期設定 ──────────────────────────────────────────────
-_SYNC_CONFIG_PATH = Path(__file__).parent / "sync_config.json"
-_SYNC_CONFIG_DEFAULT = {
-    "server_ip": "192.168.10.1",
-    "server_port": 5400,
-    "db_path": str(Path.home() / "plantapps/01_tenken/tenken.db"),
-}
-
-def _load_sync_config() -> dict:
-    if _SYNC_CONFIG_PATH.exists():
-        with open(_SYNC_CONFIG_PATH, encoding="utf-8") as f:
-            return {**_SYNC_CONFIG_DEFAULT, **json.load(f)}
-    return dict(_SYNC_CONFIG_DEFAULT)
-
 
 # ─── 棟→曜日マップ読み込み ─────────────────────────────────
 _DAY_MAP_PATH = Path(__file__).parent / "building_day_map.json"
@@ -111,114 +95,6 @@ def inspect(day: int):
 
 
 # ─── REST API ─────────────────────────────────────────────
-
-@app.route("/api/sync/config")
-def api_sync_config_get():
-    return jsonify(_load_sync_config())
-
-
-@app.route("/api/sync/config", methods=["POST"])
-def api_sync_config_save():
-    import ipaddress
-    data = request.get_json(silent=True)
-    if not data:
-        return jsonify({"error": "JSONが必要です"}), 400
-    cfg = _load_sync_config()
-    if "server_ip" in data:
-        raw_ip = str(data["server_ip"]).strip()
-        try:
-            ip = ipaddress.ip_address(raw_ip)
-            if not ip.is_private:
-                return jsonify({"error": "server_ip はプライベートIPアドレスのみ指定できます"}), 400
-        except ValueError:
-            return jsonify({"error": "server_ip が不正なIPアドレスです"}), 400
-        cfg["server_ip"] = raw_ip
-    if "server_port" in data:
-        try:
-            port = int(data["server_port"])
-            if not (1 <= port <= 65535):
-                raise ValueError
-            cfg["server_port"] = port
-        except (ValueError, TypeError):
-            return jsonify({"error": "server_port は1〜65535の整数で指定してください"}), 400
-    if "db_path" in data:
-        raw_path = str(data["db_path"]).strip()
-        allowed_base = Path.home() / "plantapps"
-        try:
-            resolved = Path(raw_path).resolve()
-            resolved.relative_to(allowed_base)
-        except ValueError:
-            return jsonify({"error": f"db_path は {allowed_base} 内のパスのみ指定できます"}), 400
-        cfg["db_path"] = raw_path
-    with open(_SYNC_CONFIG_PATH, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, indent=2, ensure_ascii=False)
-    return jsonify({"ok": True, "config": cfg})
-
-
-@app.route("/api/sync/run", methods=["POST"])
-def api_sync_run():
-    cfg = _load_sync_config()
-    server_ip  = cfg["server_ip"]
-    server_port = cfg["server_port"]
-    db_path    = cfg["db_path"]
-    upload_url = f"http://{server_ip}:{server_port}/api/tenken/upload"
-    status_url = f"http://{server_ip}:{server_port}/api/tenken/status"
-
-    def generate():
-        def log(msg):
-            ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            return f"data: [{ts}] {msg}\n\n"
-
-        yield log("=== DB同期開始 ===")
-
-        r = subprocess.run(["ping", "-c", "1", "-W", "2", server_ip], capture_output=True)
-        if r.returncode != 0:
-            yield log(f"エラー: {server_ip} に到達できません。Wi-Fi接続を確認してください")
-            yield "data: [DONE:error]\n\n"
-            return
-        yield log(f"サーバ到達確認OK: {server_ip}")
-
-        if not os.path.exists(db_path):
-            yield log(f"エラー: DBファイルが見つかりません: {db_path}")
-            yield "data: [DONE:error]\n\n"
-            return
-        size_kb = os.path.getsize(db_path) // 1024
-        yield log(f"DBファイル確認OK: {db_path} ({size_kb}KB)")
-
-        yield log("サーバ側DB状態を確認中...")
-        r = subprocess.run(
-            ["curl", "-s", "--connect-timeout", "5", status_url],
-            capture_output=True, text=True
-        )
-        if r.stdout.strip():
-            yield log(f"サーバ状態: {r.stdout.strip()}")
-        else:
-            yield log("警告: サーバ状態の取得に失敗しました（続行します）")
-
-        yield log(f"DBをアップロード中: {upload_url}")
-        r = subprocess.run(
-            ["curl", "-s", "-o", "/tmp/tenken_sync_resp.txt",
-             "-w", "%{http_code}", "--connect-timeout", "10",
-             "-F", f"db=@{db_path}", upload_url],
-            capture_output=True, text=True
-        )
-        http_code = r.stdout.strip()
-        try:
-            resp_body = Path("/tmp/tenken_sync_resp.txt").read_text()
-        except Exception:
-            resp_body = ""
-
-        if http_code == "200":
-            yield log(f"同期成功: {resp_body.strip()}")
-            yield log("=== DB同期完了 ===")
-            yield "data: [DONE:ok]\n\n"
-        else:
-            yield log(f"エラー: HTTPコード={http_code} レスポンス={resp_body.strip()}")
-            yield "data: [DONE:error]\n\n"
-
-    return Response(generate(), mimetype="text/event-stream",
-                    headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"})
-
 
 @app.route("/api/health")
 def health():
@@ -451,7 +327,8 @@ def api_import_excel():
     """
     POST /api/import-excel
     multipart/form-data: file=<Excel file>
-    点検表Excelを読み込み、inspection_itemsテーブルを更新する
+    点検表Excelを読み込み、inspection_itemsテーブルを更新する。
+    未知の建物がある場合は needs_scan=true と建物リストを返して曜日割り当てを求める。
     """
     if "file" not in request.files:
         return jsonify({"error": "ファイルが選択されていません"}), 400
@@ -470,12 +347,34 @@ def api_import_excel():
             f.save(tmp.name)
             tmp_path = tmp.name
 
-        from import_excel import import_from_excel
+        from import_excel import scan_building_names, get_day_of_week, reload_building_map, import_from_excel
+        reload_building_map()
+        names = scan_building_names(tmp_path)
+
+        def _day_or_none(name):
+            d = get_day_of_week(name)
+            return d if d >= 0 else None
+
+        buildings = [{"name": n, "day": _day_or_none(n)} for n in names]
+        has_unknown = any(b["day"] is None for b in buildings)
+
+        if has_unknown:
+            scan_id = str(uuid.uuid4())
+            _pending_scans[scan_id] = tmp_path
+            tmp_path = None  # finallyでの削除を抑止（_pending_scansが管理）
+            return jsonify({
+                "ok": True,
+                "needs_scan": True,
+                "scan_id": scan_id,
+                "buildings": buildings,
+                "has_unknown": True,
+            }), 200
+
         buf = io.StringIO()
         try:
             with contextlib.redirect_stdout(buf):
                 import_from_excel(tmp_path, no_confirm=True)
-        except SystemExit as e:
+        except SystemExit:
             output = buf.getvalue()
             return jsonify({"error": output or "インポートに失敗しました"}), 500
 
@@ -583,7 +482,7 @@ def api_net_import_commit():
 
     tmp_path = _pending_scans.pop(scan_id, None)
     if not tmp_path or not os.path.exists(tmp_path):
-        return jsonify({"error": "セッションが無効です。もう一度ネットから取得してください。"}), 400
+        return jsonify({"error": "セッションが無効です。もう一度ファイルを選択してインポートしてください。"}), 400
 
     try:
         if isinstance(building_days, dict) and building_days:

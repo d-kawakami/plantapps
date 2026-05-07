@@ -109,65 +109,6 @@
       </button>
     </div>
 
-    <!-- DB同期 -->
-    <details id="sync-section" style="margin-top:1rem;background:#fff;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.1);overflow:hidden">
-      <summary style="cursor:pointer;font-size:.85rem;font-weight:700;color:#2c5f8a;padding:.75rem 1rem;user-select:none">
-        🔄 DB同期設定
-      </summary>
-      <div style="padding:.75rem 1rem;border-top:1px solid #e8eef4">
-
-        <!-- 設定フォーム -->
-        <div style="margin-bottom:1rem">
-          <div style="font-size:.85rem;font-weight:700;color:#2c5f8a;margin-bottom:.65rem">⚙️ サーバ接続設定</div>
-
-          <div style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.6rem">
-            <label for="sync-server-ip" style="font-size:.8rem;font-weight:600;color:#444">サーバ IP アドレス</label>
-            <input type="text" id="sync-server-ip" placeholder="192.168.10.1" inputmode="url"
-              style="padding:.4rem .65rem;border:1px solid #d0d8e4;border-radius:8px;font-size:.9rem;box-sizing:border-box">
-            <span style="font-size:.73rem;color:#888">同期先サーバ（X260 AP）のIPアドレス</span>
-          </div>
-
-          <div style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.6rem">
-            <label for="sync-server-port" style="font-size:.8rem;font-weight:600;color:#444">ポート番号</label>
-            <input type="number" id="sync-server-port" placeholder="5400" min="1" max="65535" inputmode="numeric"
-              style="padding:.4rem .65rem;border:1px solid #d0d8e4;border-radius:8px;font-size:.9rem;box-sizing:border-box">
-          </div>
-
-          <div style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.6rem">
-            <label for="sync-db-path" style="font-size:.8rem;font-weight:600;color:#444">DBファイルパス</label>
-            <input type="text" id="sync-db-path" placeholder="/data/data/com.termux/files/home/plantapps/01_tenken/tenken.db"
-              style="padding:.4rem .65rem;border:1px solid #d0d8e4;border-radius:8px;font-size:.9rem;box-sizing:border-box">
-            <span style="font-size:.73rem;color:#888">アップロードする SQLite ファイルの絶対パス</span>
-          </div>
-
-          <div id="sync-url-preview" style="background:#f0f4f8;border-radius:6px;padding:.5rem .75rem;font-size:.78rem;color:#555;font-family:monospace;word-break:break-all;margin-bottom:.65rem">
-            アップロード先: <span id="sync-preview-upload"></span><br>
-            ステータス確認: <span id="sync-preview-status"></span>
-          </div>
-
-          <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
-            <button id="sync-save-btn" style="padding:.45rem 1rem;background:#2c5f8a;color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer">
-              💾 設定を保存
-            </button>
-            <span id="sync-save-msg" style="font-size:.8rem;padding:.35rem .6rem;border-radius:6px;display:none"></span>
-          </div>
-        </div>
-
-        <!-- 同期実行 -->
-        <div style="border-top:1px solid #e8eef4;padding-top:.75rem">
-          <div style="font-size:.85rem;font-weight:700;color:#2c5f8a;margin-bottom:.5rem">▶️ 同期実行</div>
-          <p style="font-size:.82rem;color:#555;margin:0 0 .75rem">
-            設定済みのサーバへ tenken.db をアップロードします。<br>
-            Wi-Fi でサーバに接続されている必要があります。
-          </p>
-          <button id="sync-run-btn" style="padding:.45rem 1rem;background:#27ae60;color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;margin-bottom:.75rem">
-            🔄 同期を実行
-          </button>
-          <div id="sync-log" style="display:none;background:#1a1a2e;color:#a8d8a8;border-radius:8px;padding:.75rem 1rem;font-family:monospace;font-size:.78rem;line-height:1.6;min-height:120px;max-height:300px;overflow-y:auto;white-space:pre-wrap;word-break:break-all"></div>
-        </div>
-
-      </div>
-    </details>
   </main>
 
   <div class="sync-status" id="sync-status">
@@ -379,6 +320,13 @@
         const res = await fetch("/api/import-excel", { method: "POST", body: fd });
         const json = await res.json();
 
+        if (res.ok && json.needs_scan) {
+          _netImportResultEl = importResultEl;
+          _pendingScanId = json.scan_id;
+          _openBldgAssignModal(json.buildings);
+          return;
+        }
+
         importResultEl.style.display = "block";
         if (res.ok) {
           importResultEl.style.background = "#e8f5e9";
@@ -400,124 +348,6 @@
         importBtnEl.style.opacity = "1";
       }
     });
-
-    // ── DB同期 ────────────────────────────────────────────
-    const syncServerIpEl   = document.getElementById('sync-server-ip');
-    const syncServerPortEl = document.getElementById('sync-server-port');
-    const syncDbPathEl     = document.getElementById('sync-db-path');
-    const syncSaveBtn      = document.getElementById('sync-save-btn');
-    const syncSaveMsg      = document.getElementById('sync-save-msg');
-    const syncRunBtn       = document.getElementById('sync-run-btn');
-    const syncLogEl        = document.getElementById('sync-log');
-    const syncPreviewUpload = document.getElementById('sync-preview-upload');
-    const syncPreviewStatus = document.getElementById('sync-preview-status');
-
-    function updateSyncPreview() {
-      const ip   = syncServerIpEl.value.trim() || '…';
-      const port = syncServerPortEl.value.trim() || '…';
-      syncPreviewUpload.textContent = `http://${ip}:${port}/api/tenken/upload`;
-      syncPreviewStatus.textContent = `http://${ip}:${port}/api/tenken/status`;
-    }
-    syncServerIpEl.addEventListener('input', updateSyncPreview);
-    syncServerPortEl.addEventListener('input', updateSyncPreview);
-
-    async function loadSyncConfig() {
-      try {
-        const res = await fetch('/api/sync/config');
-        const cfg = await res.json();
-        syncServerIpEl.value   = cfg.server_ip   ?? '';
-        syncServerPortEl.value = cfg.server_port ?? '';
-        syncDbPathEl.value     = cfg.db_path     ?? '';
-        updateSyncPreview();
-      } catch (e) { console.error('同期設定読み込みエラー:', e); }
-    }
-
-    syncSaveBtn.addEventListener('click', async () => {
-      syncSaveMsg.style.display = 'none';
-      syncSaveBtn.disabled = true;
-      try {
-        const res = await fetch('/api/sync/config', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            server_ip:   syncServerIpEl.value.trim(),
-            server_port: parseInt(syncServerPortEl.value, 10),
-            db_path:     syncDbPathEl.value.trim(),
-          }),
-        });
-        const json = await res.json();
-        syncSaveMsg.style.display = 'inline-block';
-        if (res.ok) {
-          syncSaveMsg.style.background = '#e8f5e9'; syncSaveMsg.style.color = '#1b5e20';
-          syncSaveMsg.textContent = '✅ 保存しました';
-        } else {
-          syncSaveMsg.style.background = '#fdecea'; syncSaveMsg.style.color = '#b71c1c';
-          syncSaveMsg.textContent = '❌ ' + (json.error || '保存に失敗しました');
-        }
-      } catch (e) {
-        syncSaveMsg.style.display = 'inline-block';
-        syncSaveMsg.style.background = '#fdecea'; syncSaveMsg.style.color = '#b71c1c';
-        syncSaveMsg.textContent = '❌ 通信エラー: ' + e.message;
-      } finally {
-        syncSaveBtn.disabled = false;
-        setTimeout(() => { syncSaveMsg.style.display = 'none'; }, 3000);
-      }
-    });
-
-    syncRunBtn.addEventListener('click', () => {
-      syncRunBtn.disabled = true;
-      syncRunBtn.textContent = '⏳ 同期中...';
-      syncLogEl.style.display = 'block';
-      syncLogEl.innerHTML = '';
-
-      fetch('/api/sync/run', { method: 'POST' })
-        .then(res => {
-          const reader = res.body.getReader();
-          const decoder = new TextDecoder();
-          let buf = '';
-
-          function push(chunk) {
-            buf += decoder.decode(chunk, { stream: true });
-            const lines = buf.split('\n');
-            buf = lines.pop();
-            for (const line of lines) {
-              if (!line.startsWith('data: ')) continue;
-              const msg = line.slice(6);
-              if (msg === '[DONE:ok]' || msg === '[DONE:error]') {
-                syncRunBtn.disabled = false;
-                syncRunBtn.textContent = '🔄 同期を実行';
-                return;
-              }
-              const span = document.createElement('span');
-              if (msg.includes('エラー'))        span.style.color = '#ff6b6b';
-              else if (msg.includes('警告') || msg.includes('失敗')) span.style.color = '#ffd93d';
-              else if (msg.includes('完了') || msg.includes('成功')) span.style.color = '#69d669';
-              span.textContent = msg + '\n';
-              syncLogEl.appendChild(span);
-              syncLogEl.scrollTop = syncLogEl.scrollHeight;
-            }
-          }
-
-          function read() {
-            return reader.read().then(({ done, value }) => {
-              if (done) { syncRunBtn.disabled = false; syncRunBtn.textContent = '🔄 同期を実行'; return; }
-              push(value);
-              return read();
-            });
-          }
-          return read();
-        })
-        .catch(e => {
-          const span = document.createElement('span');
-          span.style.color = '#ff6b6b';
-          span.textContent = '通信エラー: ' + e.message + '\n';
-          syncLogEl.appendChild(span);
-          syncRunBtn.disabled = false;
-          syncRunBtn.textContent = '🔄 同期を実行';
-        });
-    });
-
-    loadSyncConfig();
 
     // ── ネットワークXLSXインポート ──────────────────────────────
     var NET_IMPORT_LS_KEY = 'tenkenNetImportListUrl';
