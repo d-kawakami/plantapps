@@ -16,7 +16,7 @@ Each app works independently but gains additional value when used together throu
 | 01 | **Daily Inspection** | `5001` | Record daily equipment checks by day of the week |
 | 02 | **Equipment Register** | `5002` | Master database for all facility equipment |
 | 03 | **Handover Notes** | `5003` | Shift handover log with keyword search and TTS |
-| 04 | **Photo Manager** | `5400` | Upload and browse on-site photos and videos |
+| 04 | **Photo Manager** | `5004` | Upload and browse on-site photos and videos |
 
 All four apps share a **fixed bottom navigation bar** so you can switch between them instantly from any screen on a mobile device.
 
@@ -131,14 +131,14 @@ python app.py
 
 Open `http://localhost:5003` in your browser.
 
-### 04 Photo Manager (port 5400)
+### 04 Photo Manager (port 5004)
 
 ```bash
 cd 04_photo
 python app.py
 ```
 
-Open `http://localhost:5400/media` in your browser.
+Open `http://localhost:5004/media` in your browser.
 
 ---
 
@@ -151,7 +151,7 @@ Replace `localhost` with the server's IP address:
 http://192.168.1.xxx:5001    ← Daily Inspection
 http://192.168.1.xxx:5002    ← Equipment Register
 http://192.168.1.xxx:5003    ← Handover Notes
-http://192.168.1.xxx:5400/media    ← Photo Manager
+http://192.168.1.xxx:5004/media    ← Photo Manager
 ```
 
 The bottom navigation bar automatically detects the hostname and constructs the correct URLs for all tabs.
@@ -189,7 +189,7 @@ plantapps/
 │   └── templates/
 │
 └── 04_photo/               ← Photo Manager app
-    ├── app.py              ← Flask app (port 5400)
+    ├── app.py              ← Flask app (port 5004)
     ├── uploads/            ← Uploaded files
     └── templates/
 ```

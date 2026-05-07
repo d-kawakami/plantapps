@@ -250,8 +250,8 @@ Click "XLSXインポート" in the header to import a file immediately.
 ヘッダー右上の「🌐 ネットから」ボタンからネットワーク上のサーバーの xlsx を取り込めます。  
 Click "🌐 ネットから" to import xlsx files from a server on the network.
 
-[media-kanri](https://github.com/d-kawakami/media-kanri) と連携する場合は `http://サーバーIP:5400/api/files` を入力してください。  
-When using with media-kanri, enter `http://<server-ip>:5400/api/files`.
+[media-kanri](https://github.com/d-kawakami/media-kanri) と連携する場合は `http://サーバーIP:5004/api/files` を入力してください。  
+When using with media-kanri, enter `http://<server-ip>:5004/api/files`.
 
 ### 列マッピング / Column Mapping
 
