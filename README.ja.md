@@ -16,7 +16,7 @@
 | 01 | **日常点検アプリ** | `5001` | 曜日別の設備点検結果を記録するPWA |
 | 02 | **機器台帳** | `5002` | 施設内全機器の情報を一元管理するデータベース |
 | 03 | **引継ぎノート** | `5003` | シフト引継ぎログ（キーワード検索・音声読み上げ対応） |
-| 04 | **写真管理** | `5004` | 現場で撮影した写真・動画のアップロードと閲覧 |
+| 04 | **写真管理** | `5400` | 現場で撮影した写真・動画のアップロードと閲覧 |
 
 4つのアプリには共通の**ボトムナビゲーションバー**が搭載されており、どの画面からでも別アプリへ瞬時に切り替えられます。
 
@@ -68,7 +68,7 @@ const fd = new FormData();
 fd.append('image', photoFile);
 fd.append('source', 'inspection');
 fd.append('memo', '5号ポンプ軸受部');
-await fetch(`http://${host}:5004/api/upload`, { method: 'POST', body: fd });
+await fetch(`http://${host}:5400/api/upload`, { method: 'POST', body: fd });
 ```
 
 ---
@@ -84,7 +84,7 @@ await fetch(`http://${host}:5004/api/upload`, { method: 'POST', body: fd });
 pip install -r 01_tenken/requirements.txt
 pip install -r 02_daicho/requirements.txt
 pip install flask openpyxl          # 03_note
-pip install flask                   # 04_media
+pip install flask                   # 04_photo
 ```
 
 まとめてインストールする場合：
@@ -146,14 +146,14 @@ python app.py
 
 ブラウザで `http://localhost:5003` を開く。
 
-### 04 写真管理（ポート 5004）
+### 04 写真管理（ポート 5400）
 
 ```bash
-cd 04_media
+cd 04_photo
 python app.py
 ```
 
-ブラウザで `http://localhost:5004/media` を開く。
+ブラウザで `http://localhost:5400/media` を開く。
 
 ---
 
@@ -166,7 +166,7 @@ python app.py
 http://192.168.1.xxx:5001    ← 日常点検
 http://192.168.1.xxx:5002    ← 機器台帳
 http://192.168.1.xxx:5003    ← 引継ぎノート
-http://192.168.1.xxx:5004/media    ← 写真管理
+http://192.168.1.xxx:5400/media    ← 写真管理
 ```
 
 ボトムナビゲーションバーは `window.location.hostname` を自動取得して各タブのURLを構成するため、IPアドレスが変わっても設定変更不要です。
@@ -203,8 +203,8 @@ plantapps/
 │   ├── app.py              ← Flaskアプリ本体（ポート 5003）
 │   └── templates/
 │
-└── 04_media/               ← 写真管理アプリ
-    ├── app.py              ← Flaskアプリ本体（ポート 5004）
+└── 04_photo/               ← 写真管理アプリ
+    ├── app.py              ← Flaskアプリ本体（ポート 5400）
     ├── uploads/            ← アップロードファイル保存先
     └── templates/
 ```
@@ -289,7 +289,7 @@ taskkill /PID <PID> /F
 ### モバイルからアクセスできない
 
 - サーバーとモバイル端末が同一Wi-Fiに接続されているか確認
-- Windowsファイアウォールで各ポート（5001〜5004）の受信を許可
+- Windowsファイアウォールで各ポート（5001〜5003、5400）の受信を許可
 - サーバーのIPアドレスは `ipconfig`（Windows）または `ip a`（Linux）で確認
 
 ### ボトムナビのタブURLが正しくない
